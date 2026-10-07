@@ -25,6 +25,8 @@ private:
     AP10AudioProcessor& audioProcessor;
 
     juce::TextButton loadRomButton { "Load ROM (ap10.lsi303)" };
+    juce::Label toneLabel { {}, "Tone:" };
+    juce::ComboBox toneSelector;
     juce::Label statusLabel;
     juce::Label voiceCountLabel;
     juce::TextEditor consoleOutput;

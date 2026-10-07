@@ -54,6 +54,32 @@ AP10AudioProcessorEditor::AP10AudioProcessorEditor (AP10AudioProcessor& p)
     voiceCountLabel.setColour(juce::Label::textColourId, juce::Colours::cyan);
     voiceCountLabel.setFont(juce::FontOptions(13.0f));
 
+    // Tone / Preset Selector UI
+    addAndMakeVisible(toneLabel);
+    toneLabel.setText("Tone:", juce::dontSendNotification);
+    toneLabel.setColour(juce::Label::textColourId, juce::Colour(0xffd4d4d8));
+    toneLabel.setFont(juce::FontOptions(12.0f, juce::Font::bold));
+
+    addAndMakeVisible(toneSelector);
+    toneSelector.addItem("1: Grand Piano", 1);
+    toneSelector.addItem("2: E. Piano", 2);
+    toneSelector.addItem("3: Harpsichord", 3);
+    toneSelector.addItem("4: Pipe Organ", 4);
+    toneSelector.addItem("5: Strings", 5);
+    toneSelector.setSelectedId(audioProcessor.getEngine().current_preset + 1, juce::dontSendNotification);
+
+    toneSelector.onChange = [this]()
+    {
+        int selectedIndex = toneSelector.getSelectedId() - 1;
+        if (selectedIndex >= 0 && selectedIndex < 5)
+        {
+            audioProcessor.getEngine().setTone(selectedIndex);
+            audioProcessor.setCurrentProgram(selectedIndex);
+            audioProcessor.addDebugLog("GUI Tone Changed: " + juce::String(audioProcessor.getEngine().presets[selectedIndex].name));
+            statusLabel.setText("Tone: " + juce::String(audioProcessor.getEngine().presets[selectedIndex].name), juce::dontSendNotification);
+        }
+    };
+
     addAndMakeVisible(consoleOutput);
     consoleOutput.setMultiLine(true);
     consoleOutput.setReadOnly(true);
@@ -62,7 +88,7 @@ AP10AudioProcessorEditor::AP10AudioProcessorEditor (AP10AudioProcessor& p)
     consoleOutput.setColour(juce::TextEditor::backgroundColourId, juce::Colour(0xff18181b));
     consoleOutput.setColour(juce::TextEditor::textColourId, juce::Colour(0xff4ade80));
 
-    setSize(620, 440);
+    setSize(680, 450);
     startTimerHz(25);
 }
 
@@ -81,6 +107,13 @@ void AP10AudioProcessorEditor::timerCallback()
 
     int active = audioProcessor.getActiveVoiceCount();
     voiceCountLabel.setText("Voices: " + juce::String(active) + " / 24", juce::dontSendNotification);
+
+    // Sync GUI tone selector if changed via MIDI Program Change
+    int currentToneId = audioProcessor.getEngine().current_preset + 1;
+    if (toneSelector.getSelectedId() != currentToneId)
+    {
+        toneSelector.setSelectedId(currentToneId, juce::dontSendNotification);
+    }
 
     repaint();
 }
@@ -135,9 +168,12 @@ void AP10AudioProcessorEditor::paint (juce::Graphics& g)
 
 void AP10AudioProcessorEditor::resized()
 {
-    loadRomButton.setBounds(getWidth() - 170, 10, 155, 30);
-    statusLabel.setBounds(15, 5, 260, 24);
-    voiceCountLabel.setBounds(15, 26, 200, 20);
+    statusLabel.setBounds(15, 5, 230, 24);
+    voiceCountLabel.setBounds(15, 26, 180, 20);
+
+    toneLabel.setBounds(getWidth() - 410, 10, 45, 30);
+    toneSelector.setBounds(getWidth() - 365, 10, 195, 30);
+    loadRomButton.setBounds(getWidth() - 160, 10, 145, 30);
 
     consoleOutput.setBounds(15, 130, getWidth() - 30, getHeight() - 145);
 }
