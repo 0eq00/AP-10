@@ -9,6 +9,19 @@
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
 
+juce::String AP10AudioProcessorEditor::toHex32(uint32_t val)
+{
+    return "0x" + juce::String::toHexString(static_cast<int>(val)).toUpperCase().paddedLeft('0', 8);
+}
+
+uint32_t AP10AudioProcessorEditor::parseHex32(const juce::String& text)
+{
+    juce::String clean = text.trim();
+    if (clean.startsWithIgnoreCase("0x"))
+        clean = clean.substring(2);
+    return clean.getHexValue32();
+}
+
 AP10AudioProcessorEditor::AP10AudioProcessorEditor (AP10AudioProcessor& p)
     : AudioProcessorEditor (&p), audioProcessor (p)
 {
@@ -76,10 +89,57 @@ AP10AudioProcessorEditor::AP10AudioProcessorEditor (AP10AudioProcessor& p)
         {
             audioProcessor.getEngine().setTone(selectedIndex);
             audioProcessor.setCurrentProgram(selectedIndex);
-            audioProcessor.addDebugLog("GUI Tone Changed: " + juce::String(audioProcessor.getEngine().presets[selectedIndex].name));
-            statusLabel.setText("Tone: " + juce::String(audioProcessor.getEngine().presets[selectedIndex].name), juce::dontSendNotification);
+
+            const auto& preset = audioProcessor.getEngine().getCurrentPreset();
+            decayEditor.setText(toHex32(preset.decay_rate), juce::dontSendNotification);
+            releaseEditor.setText(toHex32(preset.release_rate), juce::dontSendNotification);
+            sustainEditor.setText(toHex32(preset.sustain_level), juce::dontSendNotification);
+
+            audioProcessor.addDebugLog("GUI Tone Changed: " + juce::String(preset.name));
+            statusLabel.setText("Tone: " + juce::String(preset.name), juce::dontSendNotification);
         }
     };
+
+    // Envelope controls setup
+    addAndMakeVisible(envTitleLabel);
+    envTitleLabel.setColour(juce::Label::textColourId, juce::Colour(0xfff59e0b));
+    envTitleLabel.setFont(juce::FontOptions(11.0f, juce::Font::bold));
+
+    addAndMakeVisible(decayLabel);
+    decayLabel.setFont(juce::FontOptions(11.0f));
+    addAndMakeVisible(decayEditor);
+    decayEditor.setMultiLine(false);
+    decayEditor.setInputRestrictions(10, "0123456789abcdefABCDEFxX");
+
+    addAndMakeVisible(releaseLabel);
+    releaseLabel.setFont(juce::FontOptions(11.0f));
+    addAndMakeVisible(releaseEditor);
+    releaseEditor.setMultiLine(false);
+    releaseEditor.setInputRestrictions(10, "0123456789abcdefABCDEFxX");
+
+    addAndMakeVisible(sustainLabel);
+    sustainLabel.setFont(juce::FontOptions(11.0f));
+    addAndMakeVisible(sustainEditor);
+    sustainEditor.setMultiLine(false);
+    sustainEditor.setInputRestrictions(10, "0123456789abcdefABCDEFxX");
+
+    const auto& initPreset = audioProcessor.getEngine().getCurrentPreset();
+    decayEditor.setText(toHex32(initPreset.decay_rate), juce::dontSendNotification);
+    releaseEditor.setText(toHex32(initPreset.release_rate), juce::dontSendNotification);
+    sustainEditor.setText(toHex32(initPreset.sustain_level), juce::dontSendNotification);
+
+    auto updateEngineEnvelope = [this]()
+    {
+        int idx = audioProcessor.getEngine().current_preset;
+        uint32_t d = parseHex32(decayEditor.getText());
+        uint32_t r = parseHex32(releaseEditor.getText());
+        uint32_t s = parseHex32(sustainEditor.getText());
+        audioProcessor.getEngine().setEnvelopeParams(idx, d, r, s);
+    };
+
+    decayEditor.onTextChange = updateEngineEnvelope;
+    releaseEditor.onTextChange = updateEngineEnvelope;
+    sustainEditor.onTextChange = updateEngineEnvelope;
 
     addAndMakeVisible(consoleOutput);
     consoleOutput.setMultiLine(true);
@@ -89,7 +149,7 @@ AP10AudioProcessorEditor::AP10AudioProcessorEditor (AP10AudioProcessor& p)
     consoleOutput.setColour(juce::TextEditor::backgroundColourId, juce::Colour(0xff18181b));
     consoleOutput.setColour(juce::TextEditor::textColourId, juce::Colour(0xff4ade80));
 
-    setSize(680, 450);
+    setSize(680, 480);
     startTimerHz(25);
 }
 
@@ -113,6 +173,10 @@ void AP10AudioProcessorEditor::timerCallback()
     if (toneSelector.getSelectedId() != currentToneId)
     {
         toneSelector.setSelectedId(currentToneId, juce::dontSendNotification);
+        const auto& preset = audioProcessor.getEngine().getCurrentPreset();
+        decayEditor.setText(toHex32(preset.decay_rate), juce::dontSendNotification);
+        releaseEditor.setText(toHex32(preset.release_rate), juce::dontSendNotification);
+        sustainEditor.setText(toHex32(preset.sustain_level), juce::dontSendNotification);
     }
 
     repaint();
@@ -128,12 +192,18 @@ void AP10AudioProcessorEditor::paint (juce::Graphics& g)
     g.setColour(juce::Colours::gold);
     g.drawRect(0, 0, getWidth(), 50, 1);
 
+    // Draw envelope tuner bar background
+    g.setColour(juce::Colour(0xff18181b));
+    g.fillRect(0, 50, getWidth(), 35);
+    g.setColour(juce::Colour(0xff27272a));
+    g.drawRect(0, 50, getWidth(), 35, 1);
+
     g.setColour(juce::Colours::lightgrey);
     g.setFont(juce::FontOptions(11.0f));
-    g.drawText("GT913 24-VOICE POLYPHONY MATRIX:", 15, 60, 300, 18, juce::Justification::left);
+    g.drawText("GT913 24-VOICE POLYPHONY MATRIX:", 15, 92, 300, 18, juce::Justification::left);
 
     int startX = 15;
-    int startY = 82;
+    int startY = 114;
     int ledW = 20;
     int ledH = 14;
     int gap = 4;
@@ -173,5 +243,14 @@ void AP10AudioProcessorEditor::resized()
     toneSelector.setBounds(getWidth() - 365, 10, 195, 30);
     loadRomButton.setBounds(getWidth() - 160, 10, 145, 30);
 
-    consoleOutput.setBounds(15, 130, getWidth() - 30, getHeight() - 145);
+    // Envelope tuner bar layout (y: 50..85)
+    envTitleLabel.setBounds(15, 57, 130, 20);
+    decayLabel.setBounds(150, 57, 40, 20);
+    decayEditor.setBounds(190, 54, 85, 22);
+    releaseLabel.setBounds(285, 57, 50, 20);
+    releaseEditor.setBounds(335, 54, 85, 22);
+    sustainLabel.setBounds(430, 57, 50, 20);
+    sustainEditor.setBounds(480, 54, 85, 22);
+
+    consoleOutput.setBounds(15, 160, getWidth() - 30, getHeight() - 175);
 }

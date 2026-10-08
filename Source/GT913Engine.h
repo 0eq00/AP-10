@@ -94,6 +94,7 @@ public:
     static const PianoKeyParam strings_key_map[88];
 
     static const TonePreset presets[5];
+    TonePreset mod_presets[5];
 
     int current_preset = 0;
     bool damper_pedal = false;
@@ -108,6 +109,8 @@ public:
     void setTone(int index);
     const TonePreset& getCurrentPreset() const;
     const PianoKeyParam* getKeyMapForCurrentPreset() const;
+    void setEnvelopeParams(int presetIndex, uint32_t decay, uint32_t release, uint32_t sustain);
+
     void noteOn(int midiNote, int velocity);
     void noteOff(int midiNote);
     void setDamperPedal(bool down);

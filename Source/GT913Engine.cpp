@@ -493,6 +493,10 @@ const GT913Engine::TonePreset GT913Engine::presets[5] = {
 
 GT913Engine::GT913Engine()
 {
+    for (int i = 0; i < 5; ++i)
+    {
+        mod_presets[i] = presets[i];
+    }
     setTone(0);
     reset();
 }
@@ -505,16 +509,27 @@ void GT913Engine::setTone(int index)
 {
     if (index < 0 || index >= 5) return;
     current_preset = index;
+    mod_presets[index] = presets[index];
 }
 
 const GT913Engine::TonePreset& GT913Engine::getCurrentPreset() const
 {
-    return presets[current_preset >= 0 && current_preset < 5 ? current_preset : 0];
+    return mod_presets[current_preset >= 0 && current_preset < 5 ? current_preset : 0];
 }
 
 const GT913Engine::PianoKeyParam* GT913Engine::getKeyMapForCurrentPreset() const
 {
     return getCurrentPreset().key_map;
+}
+
+void GT913Engine::setEnvelopeParams(int presetIndex, uint32_t decay, uint32_t release, uint32_t sustain)
+{
+    if (presetIndex >= 0 && presetIndex < 5)
+    {
+        mod_presets[presetIndex].decay_rate = decay;
+        mod_presets[presetIndex].release_rate = release;
+        mod_presets[presetIndex].sustain_level = sustain;
+    }
 }
 
 void GT913Engine::reset()

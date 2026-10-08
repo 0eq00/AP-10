@@ -22,6 +22,9 @@ public:
     void resized() override;
     void timerCallback() override;
 
+    static juce::String toHex32(uint32_t val);
+    static uint32_t parseHex32(const juce::String& text);
+
 private:
     AP10AudioProcessor& audioProcessor;
 
@@ -30,6 +33,16 @@ private:
     juce::ComboBox toneSelector;
     juce::Label statusLabel;
     juce::Label voiceCountLabel;
+
+    // Envelope parameter controls (decay_rate, release_rate, sustain_level)
+    juce::Label envTitleLabel { {}, "ENVELOPE PARAMS (HEX):" };
+    juce::Label decayLabel { {}, "Decay:" };
+    juce::TextEditor decayEditor;
+    juce::Label releaseLabel { {}, "Release:" };
+    juce::TextEditor releaseEditor;
+    juce::Label sustainLabel { {}, "Sustain:" };
+    juce::TextEditor sustainEditor;
+
     juce::TextEditor consoleOutput;
 
     std::unique_ptr<juce::FileChooser> fileChooser;
