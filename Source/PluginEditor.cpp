@@ -173,10 +173,24 @@ void AP10AudioProcessorEditor::timerCallback()
     if (toneSelector.getSelectedId() != currentToneId)
     {
         toneSelector.setSelectedId(currentToneId, juce::dontSendNotification);
-        const auto& preset = audioProcessor.getEngine().getCurrentPreset();
-        decayEditor.setText(toHex32(preset.decay_rate), juce::dontSendNotification);
-        releaseEditor.setText(toHex32(preset.release_rate), juce::dontSendNotification);
-        sustainEditor.setText(toHex32(preset.sustain_level), juce::dontSendNotification);
+    }
+
+    const auto& preset = audioProcessor.getEngine().getCurrentPreset();
+    juce::String decStr = toHex32(preset.decay_rate);
+    juce::String relStr = toHex32(preset.release_rate);
+    juce::String susStr = toHex32(preset.sustain_level);
+
+    if (!decayEditor.hasKeyboardFocus(false) && decayEditor.getText() != decStr)
+    {
+        decayEditor.setText(decStr, juce::dontSendNotification);
+    }
+    if (!releaseEditor.hasKeyboardFocus(false) && releaseEditor.getText() != relStr)
+    {
+        releaseEditor.setText(relStr, juce::dontSendNotification);
+    }
+    if (!sustainEditor.hasKeyboardFocus(false) && sustainEditor.getText() != susStr)
+    {
+        sustainEditor.setText(susStr, juce::dontSendNotification);
     }
 
     repaint();

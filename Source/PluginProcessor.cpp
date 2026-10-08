@@ -277,8 +277,45 @@ juce::AudioProcessorEditor* AP10AudioProcessor::createEditor()
     return new AP10AudioProcessorEditor (*this);
 }
 
-void AP10AudioProcessor::getStateInformation (juce::MemoryBlock&) {}
-void AP10AudioProcessor::setStateInformation (const void*, int) {}
+void AP10AudioProcessor::getStateInformation (juce::MemoryBlock& destData)
+{
+    juce::XmlElement xml ("AP10PLUGINSTATE");
+    xml.setAttribute("currentPreset", engine.current_preset);
+
+    for (int i = 0; i < 5; ++i)
+    {
+        juce::XmlElement* presetXml = xml.createNewChildElement("PRESET");
+        presetXml->setAttribute("index", i);
+        presetXml->setAttribute("decay", static_cast<int>(engine.mod_presets[i].decay_rate));
+        presetXml->setAttribute("release", static_cast<int>(engine.mod_presets[i].release_rate));
+        presetXml->setAttribute("sustain", static_cast<int>(engine.mod_presets[i].sustain_level));
+    }
+
+    copyXmlToBinary(xml, destData);
+}
+
+void AP10AudioProcessor::setStateInformation (const void* data, int sizeInBytes)
+{
+    std::unique_ptr<juce::XmlElement> xmlState (getXmlFromBinary (data, sizeInBytes));
+
+    if (xmlState != nullptr && xmlState->hasTagName ("AP10PLUGINSTATE"))
+    {
+        int presetIdx = xmlState->getIntAttribute("currentPreset", 0);
+        engine.setTone(presetIdx);
+
+        for (auto* presetXml : xmlState->getChildWithTagNameIterator("PRESET"))
+        {
+            int idx = presetXml->getIntAttribute("index", -1);
+            if (idx >= 0 && idx < 5)
+            {
+                uint32_t decay = static_cast<uint32_t>(presetXml->getIntAttribute("decay", engine.presets[idx].decay_rate));
+                uint32_t release = static_cast<uint32_t>(presetXml->getIntAttribute("release", engine.presets[idx].release_rate));
+                uint32_t sustain = static_cast<uint32_t>(presetXml->getIntAttribute("sustain", engine.presets[idx].sustain_level));
+                engine.setEnvelopeParams(idx, decay, release, sustain);
+            }
+        }
+    }
+}
 
 juce::AudioProcessor* JUCE_CALLTYPE createPluginFilter()
 {
