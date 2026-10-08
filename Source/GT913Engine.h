@@ -63,8 +63,9 @@ public:
         uint8_t  m_balance[2] = { 7, 7 };
 
         bool     m_is_releasing = false;
-        int      m_env_stage = 0; // 0: idle, 1: attack, 2: decay, 3: release
-        uint32_t m_release_rate = 3500;
+        int      m_env_stage = 0; // 0: idle, 1: attack, 2: decay, 3: sustain, 4: release
+        uint32_t m_decay_rate = 0x00001000;
+        uint32_t m_release_rate = 0x00080000;
         uint32_t m_sustain_level = 0;
     };
 
@@ -77,23 +78,7 @@ public:
     bool isRomLoaded() const { return rom_loaded; }
     size_t getRomSize() const { return rom_data.getSize(); }
 
-    // AP-10 Tone definitions
-    struct TonePreset
-    {
-        const char* name;
-        uint32_t addr_start;
-        uint32_t addr_end;
-        uint32_t addr_loop;
-        uint32_t base_pitch;
-        int      base_note;
-        uint16_t gain;
-        uint32_t attack_rate;
-        uint32_t decay_rate;
-        uint32_t release_rate;
-        uint32_t sustain_level;
-    };
-
-    // Authentic 88-Key Piano Multisample Table (from MAME hardware trace)
+    // Authentic 88-Key Multisample Table Parameter (from MAME hardware trace)
     struct PianoKeyParam
     {
         uint32_t addr_start;
@@ -104,6 +89,17 @@ public:
         uint32_t volume_target;
         uint32_t volume_rate;
         uint16_t gain;
+    };
+
+    // AP-10 Tone definitions (Envelope characteristics & multisample mapping)
+    // Redundant per-sample parameters removed since PianoKeyParam provides them per key
+    struct TonePreset
+    {
+        const char*          name;
+        const PianoKeyParam* key_map;
+        uint32_t             decay_rate;
+        uint32_t             release_rate;
+        uint32_t             sustain_level;
     };
 
     static inline const PianoKeyParam piano_key_map[88] = {
@@ -564,27 +560,14 @@ public:
 
 
     static inline const TonePreset presets[5] = {
-        { "Grand Piano",  0x06BB3A, 0x07585C, 0x072345, 0x00649062, 60, 0x0F, 0x08000000, 0x00001000, 0x00080000, 0 },
-        { "E. Piano",     0x07586C, 0x07DF00, 0x07CA00, 0x00649062, 60, 0x10, 0x0A000000, 0x00000C00, 0x00070000, 0x15000000 },
-        { "Harpsichord",  0x07DF10, 0x085200, 0x083800, 0x00649062, 60, 0x0E, 0x0C000000, 0x00002000, 0x000A0000, 0 },
-        { "Pipe Organ",   0x085210, 0x08D800, 0x08B000, 0x00649062, 60, 0x0D, 0x05000000, 0x00000200, 0x00050000, 0x50000000 },
-        { "Strings",      0x0ED294, 0x0F210A, 0x0EF5B6, 0x005402E8, 60, 0x0F, 0x00144000, 0x00000100, 0x00040000, 0x56000000 }
+        { "Grand Piano",  piano_key_map,       0x00001000, 0x00010000, 0 },
+        { "E. Piano",     epiano_key_map,      0x00000C00, 0x00070000, 0 },
+        { "Harpsichord",  harpsichord_key_map, 0x00002000, 0x00010000, 0 },
+        { "Pipe Organ",   organ_key_map,       0x00000200, 0x00010000, 0x50000000 },
+        { "Strings",      strings_key_map,     0x00000100, 0x00010000, 0x56000000 }
     };
 
     int current_preset = 0;
-
-    // Active patch parameters
-    uint32_t patch_addr_start = 0x06BB3A;
-    uint32_t patch_addr_end   = 0x07585C;
-    uint32_t patch_addr_loop  = 0x072345;
-    uint32_t patch_base_pitch = 0x00649062;
-    int      patch_base_note  = 60;
-    uint16_t patch_gain       = 0x0F;
-    uint32_t patch_attack_rate  = 0x08000000;
-    uint32_t patch_decay_rate   = 0x00001000;
-    uint32_t patch_release_rate = 0x00080000;
-    uint32_t patch_sustain_level = 0;
-
     bool damper_pedal = false;
     bool soft_pedal   = false;
 
@@ -598,31 +581,17 @@ public:
     {
         if (index < 0 || index >= 5) return;
         current_preset = index;
-        const auto& p = presets[index];
-        patch_addr_start  = p.addr_start;
-        patch_addr_end    = p.addr_end;
-        patch_addr_loop   = p.addr_loop;
-        patch_base_pitch  = p.base_pitch;
-        patch_base_note   = p.base_note;
-        patch_gain        = p.gain;
-        patch_attack_rate = p.attack_rate;
-        patch_decay_rate  = p.decay_rate;
-        patch_release_rate= p.release_rate;
-        patch_sustain_level = p.sustain_level;
+    }
+
+    const TonePreset& getCurrentPreset() const
+    {
+        return presets[current_preset >= 0 && current_preset < 5 ? current_preset : 0];
     }
 
     // Active tone multisample mapping lookup for all 5 presets
     const PianoKeyParam* getKeyMapForCurrentPreset() const
     {
-        switch (current_preset)
-        {
-            case 0: return piano_key_map;       // Grand Piano
-            case 1: return epiano_key_map;      // E. Piano
-            case 2: return harpsichord_key_map; // Harpsichord
-            case 3: return organ_key_map;       // Pipe Organ
-            case 4: return strings_key_map;     // Strings
-            default: return piano_key_map;
-        }
+        return getCurrentPreset().key_map;
     }
 
     void reset()
@@ -708,13 +677,12 @@ public:
         return true;
     }
 
-    // Calculate GT913 25-bit phase accumulator pitch for any MIDI note
-    uint32_t calculatePitch(int midiNote) const
+    // Calculate GT913 25-bit phase accumulator pitch for any MIDI note relative to a base note and pitch
+    static inline uint32_t calculatePitch(int midiNote, int baseNote, uint32_t basePitch)
     {
-        // P = P0 * 2^((note - note0) / 12)
-        double semitoneDiff = static_cast<double>(midiNote - patch_base_note);
+        double semitoneDiff = static_cast<double>(midiNote - baseNote);
         double multiplier = std::pow(2.0, semitoneDiff / 12.0);
-        double calculated = static_cast<double>(patch_base_pitch) * multiplier;
+        double calculated = static_cast<double>(basePitch) * multiplier;
         return static_cast<uint32_t>(std::clamp(calculated, 1000.0, static_cast<double>(0x01FFFFFF)));
     }
 
@@ -771,12 +739,15 @@ public:
 
         float velNorm = std::clamp(static_cast<float>(velocity) / 127.0f, 0.1f, 1.0f);
 
-        // Authentic 88-Key Multisample Table lookup (supports Piano, E.Piano, and upcoming tones)
-        const PianoKeyParam* activeKeyMap = getKeyMapForCurrentPreset();
+        // Authentic 88-Key Multisample Table lookup for active tone preset
+        const auto& preset = getCurrentPreset();
+        const PianoKeyParam* activeKeyMap = preset.key_map;
 
-        if (activeKeyMap != nullptr && midiNote >= 21 && midiNote <= 108)
+        if (activeKeyMap != nullptr)
         {
-            const auto& keyParam = activeKeyMap[midiNote - 21];
+            int clampedNote = std::clamp(midiNote, 21, 108);
+            const auto& keyParam = activeKeyMap[clampedNote - 21];
+
             v.m_addr_start   = keyParam.addr_start;
             v.m_addr_end     = keyParam.addr_end;
             v.m_addr_loop    = keyParam.addr_loop;
@@ -785,42 +756,31 @@ public:
             v.m_sample       = 0;
             v.m_sample_next  = 0;
             v.m_exp          = keyParam.exp;
-            v.m_pitch        = keyParam.pitch;
             v.m_gain         = keyParam.gain;
+
+            // Direct pitch for standard 88-key range, or pitch shift if outside
+            if (midiNote == clampedNote)
+            {
+                v.m_pitch = keyParam.pitch;
+            }
+            else
+            {
+                v.m_pitch = calculatePitch(midiNote, clampedNote, keyParam.pitch);
+            }
 
             uint32_t peakVol = static_cast<uint32_t>(keyParam.volume_target * (0.3f + 0.7f * velNorm));
             v.m_volume_current = 0;
             v.m_volume_target  = peakVol;
-            v.m_volume_rate    = keyParam.volume_rate;
-            v.m_env_stage      = 1; // Attack
+            v.m_volume_rate    = keyParam.volume_rate; // Attack ramp rate from key param
+            v.m_env_stage      = 1;                    // Attack
+
+            // Envelope decay / release / sustain parameters from active preset
+            v.m_decay_rate     = preset.decay_rate;
+            v.m_release_rate   = preset.release_rate;
+            v.m_sustain_level  = preset.sustain_level;
+
             v.m_balance[0]     = 7;
             v.m_balance[1]     = 7;
-            v.m_release_rate   = patch_release_rate;
-            v.m_sustain_level  = patch_sustain_level;
-        }
-        else
-        {
-            v.m_addr_start   = patch_addr_start;
-            v.m_addr_end     = patch_addr_end;
-            v.m_addr_loop    = patch_addr_loop;
-            v.m_addr_current = v.m_addr_start;
-            v.m_addr_frac    = 0;
-            v.m_sample       = 0;
-            v.m_sample_next  = 0;
-            v.m_exp          = 0;
-
-            v.m_pitch = calculatePitch(midiNote);
-
-            uint32_t peakVol = static_cast<uint32_t>(0x78000000 * (0.3f + 0.7f * velNorm));
-            v.m_volume_current = 0;
-            v.m_volume_target  = peakVol;
-            v.m_volume_rate    = patch_attack_rate;
-            v.m_env_stage      = 1; // Attack
-            v.m_gain           = patch_gain;
-            v.m_balance[0]     = 7;
-            v.m_balance[1]     = 7;
-            v.m_release_rate   = patch_release_rate;
-            v.m_sustain_level  = patch_sustain_level;
         }
     }
 
@@ -850,7 +810,7 @@ public:
             {
                 if (voices[i].m_enable && voices[i].m_is_releasing && voices[i].m_env_stage != 4)
                 {
-                    voices[i].m_env_stage     = 4;
+                    voices[i].m_env_stage     = 4; // Release
                     voices[i].m_volume_target = 0;
                     voices[i].m_volume_rate   = voices[i].m_release_rate;
                 }
@@ -867,53 +827,70 @@ public:
     {
         if (!v.m_enable) return;
 
-        if (v.m_env_stage == 1) // Attack
+        switch (v.m_env_stage)
         {
-            v.m_volume_current += v.m_volume_rate;
-            if (v.m_volume_current >= v.m_volume_target)
+            case 1: // Attack: volume ramps up to target peak
             {
-                v.m_volume_current = v.m_volume_target;
-                v.m_env_stage = 2; // Decay
-                v.m_volume_rate = patch_decay_rate;
-            }
-        }
-        else if (v.m_env_stage == 2) // Decay towards sustain level
-        {
-            if (v.m_volume_current > v.m_sustain_level + v.m_volume_rate)
-            {
-                v.m_volume_current -= v.m_volume_rate;
-            }
-            else
-            {
-                v.m_volume_current = v.m_sustain_level;
-                if (v.m_sustain_level == 0)
+                v.m_volume_current += v.m_volume_rate;
+                if (v.m_volume_current >= v.m_volume_target)
                 {
-                    v.m_volume_current = 0;
-                    v.m_enable = false;
-                    v.m_env_stage = 0;
+                    v.m_volume_current = v.m_volume_target;
+                    v.m_env_stage = 2; // Transition to Decay
+                    v.m_volume_rate = v.m_decay_rate;
+                }
+                break;
+            }
+
+            case 2: // Decay towards sustain level
+            {
+                if (v.m_volume_current > v.m_sustain_level + v.m_decay_rate)
+                {
+                    v.m_volume_current -= v.m_decay_rate;
                 }
                 else
                 {
-                    v.m_env_stage = 3; // Sustain stage
+                    v.m_volume_current = v.m_sustain_level;
+                    if (v.m_sustain_level == 0)
+                    {
+                        // Percussive sound without sustain (e.g. Grand Piano, Harpsichord) dies out
+                        v.m_volume_current = 0;
+                        v.m_enable = false;
+                        v.m_env_stage = 0; // Idle
+                    }
+                    else
+                    {
+                        v.m_env_stage = 3; // Sustain stage
+                    }
                 }
+                break;
             }
-        }
-        else if (v.m_env_stage == 3) // Sustain (held until note off)
-        {
-            v.m_volume_current = v.m_sustain_level;
-        }
-        else if (v.m_env_stage == 4) // Release
-        {
-            if (v.m_volume_current > v.m_release_rate)
-                v.m_volume_current -= v.m_release_rate;
-            else
+
+            case 3: // Sustain (held until note off)
             {
-                v.m_volume_current = 0;
-                v.m_enable = false;
-                v.m_env_stage = 0;
+                v.m_volume_current = v.m_sustain_level;
+                break;
             }
+
+            case 4: // Release: fade out when key released
+            {
+                if (v.m_volume_current > v.m_release_rate)
+                {
+                    v.m_volume_current -= v.m_release_rate;
+                }
+                else
+                {
+                    v.m_volume_current = 0;
+                    v.m_enable = false;
+                    v.m_env_stage = 0; // Idle
+                }
+                break;
+            }
+
+            default:
+                break;
         }
 
+        // Noise gate / fade-out threshold
         if (v.m_volume_current <= 50)
         {
             v.m_volume_current = 0;
