@@ -1,7 +1,8 @@
 /*
   ==============================================================================
     PluginEditor.cpp
-    CASIO AP-10 / GT913 Plugin Editor Implementation
+    AP-10 / GT913 Plugin Editor Implementation
+    All comments are 100% English ASCII.
   ==============================================================================
 */
 
@@ -14,9 +15,12 @@ AP10AudioProcessorEditor::AP10AudioProcessorEditor (AP10AudioProcessor& p)
     addAndMakeVisible(loadRomButton);
     loadRomButton.onClick = [this]()
     {
+        juce::File initialRomFile = AP10AudioProcessor::getDefaultRomFile();
+        juce::File startLocation = initialRomFile.existsAsFile() ? initialRomFile : AP10AudioProcessor::getPluginDirectory();
+
         fileChooser = std::make_unique<juce::FileChooser>(
-            "Select Casio AP-10 ROM (mx23c8100mc-12ca17.lsi303 or ap10.lsi303)...",
-            juce::File::getSpecialLocation(juce::File::userHomeDirectory),
+            "Select AP-10 ROM (mx23c8100mc-12ca17.lsi303 or ap10.lsi303)...",
+            startLocation,
             "*.lsi303;*.bin;*.rom");
 
         auto flags = juce::FileBrowserComponent::openMode | juce::FileBrowserComponent::canSelectFiles;
@@ -25,10 +29,8 @@ AP10AudioProcessorEditor::AP10AudioProcessorEditor (AP10AudioProcessor& p)
             auto file = fc.getResult();
             if (file.existsAsFile())
             {
-                // Explicitly clear previously loaded ROM buffer first to prevent append bug (2048 KB issue)
                 audioProcessor.getEngine().clearRom();
 
-                // Directly load into the processor's own engine (defaults to use_mame_word_swap = false)
                 if (audioProcessor.getEngine().loadAndDecryptRom(file, false))
                 {
                     audioProcessor.addDebugLog("ROM Loaded & Descrambled: " + file.getFileName()
@@ -45,7 +47,7 @@ AP10AudioProcessorEditor::AP10AudioProcessorEditor (AP10AudioProcessor& p)
     };
 
     addAndMakeVisible(statusLabel);
-    statusLabel.setText("Casio Celviano AP-10 (GT913 Sound Engine)", juce::dontSendNotification);
+    statusLabel.setText("AP-10 (GT913 Sound Engine)", juce::dontSendNotification);
     statusLabel.setColour(juce::Label::textColourId, juce::Colours::white);
     statusLabel.setFont(juce::FontOptions(15.0f, juce::Font::bold));
 
@@ -54,7 +56,6 @@ AP10AudioProcessorEditor::AP10AudioProcessorEditor (AP10AudioProcessor& p)
     voiceCountLabel.setColour(juce::Label::textColourId, juce::Colours::cyan);
     voiceCountLabel.setFont(juce::FontOptions(13.0f));
 
-    // Tone / Preset Selector UI
     addAndMakeVisible(toneLabel);
     toneLabel.setText("Tone:", juce::dontSendNotification);
     toneLabel.setColour(juce::Label::textColourId, juce::Colour(0xffd4d4d8));
@@ -108,7 +109,6 @@ void AP10AudioProcessorEditor::timerCallback()
     int active = audioProcessor.getActiveVoiceCount();
     voiceCountLabel.setText("Voices: " + juce::String(active) + " / 24", juce::dontSendNotification);
 
-    // Sync GUI tone selector if changed via MIDI Program Change
     int currentToneId = audioProcessor.getEngine().current_preset + 1;
     if (toneSelector.getSelectedId() != currentToneId)
     {
@@ -122,14 +122,12 @@ void AP10AudioProcessorEditor::paint (juce::Graphics& g)
 {
     g.fillAll(juce::Colour(0xff09090b));
 
-    // Draw Top Header
     g.setColour(juce::Colour(0xff27272a));
     g.fillRect(0, 0, getWidth(), 50);
 
     g.setColour(juce::Colours::gold);
     g.drawRect(0, 0, getWidth(), 50, 1);
 
-    // Draw 24 Voice Indicator LEDs
     g.setColour(juce::Colours::lightgrey);
     g.setFont(juce::FontOptions(11.0f));
     g.drawText("GT913 24-VOICE POLYPHONY MATRIX:", 15, 60, 300, 18, juce::Justification::left);

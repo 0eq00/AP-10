@@ -6,6 +6,8 @@
               pluginFormats="buildVST3">
   <MAINGROUP id="WaY5CJ" name="AP-10">
     <GROUP id="{8F8A863A-97A3-97EE-CBE6-E06C29536922}" name="Source">
+      <FILE id="iGeQg0" name="GT913Engine.h" compile="0" resource="0" file="Source/GT913Engine.h"/>
+      <FILE id="Au87Rp" name="GT913Engine.cpp" compile="1" resource="0" file="Source/GT913Engine.cpp"/>
       <FILE id="tZa2v4" name="PluginProcessor.cpp" compile="1" resource="0"
             file="Source/PluginProcessor.cpp"/>
       <FILE id="YCwPav" name="PluginProcessor.h" compile="0" resource="0"

@@ -1,7 +1,8 @@
 /*
   ==============================================================================
     PluginProcessor.h
-    CASIO AP-10 / GT913 Synthesizer Plugin Processor
+    AP-10 / GT913 Synthesizer Plugin Processor Header
+    All comments are 100% English ASCII.
   ==============================================================================
 */
 
@@ -43,13 +44,14 @@ public:
     void getStateInformation (juce::MemoryBlock& destData) override;
     void setStateInformation (const void* data, int sizeInBytes) override;
 
-    // Logging & Diagnostics
     void addDebugLog(const juce::String& message);
     juce::StringArray exchangeLogBuffer();
 
-    // Access to engine for GUI
     GT913Engine& getEngine() { return engine; }
     int getActiveVoiceCount() const;
+
+    static juce::File getPluginDirectory();
+    static juce::File getDefaultRomFile();
 
 private:
     GT913Engine engine;
@@ -57,8 +59,6 @@ private:
     double srcRatioCounter = 0.0;
     double hostSampleRate = 44100.0;
 
-    // 2-pole low-pass reconstruction filter (~12kHz at 114.5kHz internal clock)
-    // Eliminates ultrasonic ADPCM switching noise and downsampling aliasing
     float lpfLeft1 = 0.0f;
     float lpfLeft2 = 0.0f;
     float lpfRight1 = 0.0f;

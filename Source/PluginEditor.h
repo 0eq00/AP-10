@@ -1,7 +1,8 @@
 /*
   ==============================================================================
     PluginEditor.h
-    CASIO AP-10 / GT913 Plugin Editor Header
+    AP-10 / GT913 Plugin Editor Header
+    All comments are 100% English ASCII.
   ==============================================================================
 */
 

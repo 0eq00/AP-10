@@ -1,12 +1,52 @@
 /*
   ==============================================================================
     PluginProcessor.cpp
-    CASIO AP-10 / GT913 Synthesizer Plugin Processor
+    AP-10 / GT913 Synthesizer Plugin Processor Implementation
+    All comments are 100% English ASCII.
   ==============================================================================
 */
 
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
+
+juce::File AP10AudioProcessor::getPluginDirectory()
+{
+    juce::File currentModule = juce::File::getSpecialLocation(juce::File::currentExecutableFile);
+    juce::File dir = currentModule.isDirectory() ? currentModule : currentModule.getParentDirectory();
+
+    juce::File search = dir;
+    for (int i = 0; i < 4; ++i)
+    {
+        if (search.getChildFile("ap10.lsi303").existsAsFile())
+            return search;
+        if (search.getFileName().endsWithIgnoreCase(".vst3"))
+        {
+            if (search.getChildFile("ap10.lsi303").existsAsFile())
+                return search;
+            if (search.getParentDirectory().getChildFile("ap10.lsi303").existsAsFile())
+                return search.getParentDirectory();
+            return search;
+        }
+        if (search.getParentDirectory() == search)
+            break;
+        search = search.getParentDirectory();
+    }
+
+    return dir;
+}
+
+juce::File AP10AudioProcessor::getDefaultRomFile()
+{
+    juce::File pluginDir = getPluginDirectory();
+    juce::File targetRom = pluginDir.getChildFile("ap10.lsi303");
+    if (targetRom.existsAsFile())
+        return targetRom;
+
+    if (pluginDir.getParentDirectory().getChildFile("ap10.lsi303").existsAsFile())
+        return pluginDir.getParentDirectory().getChildFile("ap10.lsi303");
+
+    return targetRom;
+}
 
 AP10AudioProcessor::AP10AudioProcessor()
 #ifndef JucePlugin_PreferredChannelConfigurations
@@ -20,12 +60,11 @@ AP10AudioProcessor::AP10AudioProcessor()
                        )
 #endif
 {
-    // Try auto-loading ROM if present on filesystem (default: use_mame_word_swap = false)
-    juce::File romFile("C:\\TMP\\ap10.lsi303");
+    juce::File romFile = getDefaultRomFile();
     if (romFile.existsAsFile() && engine.loadAndDecryptRom(romFile, false))
     {
-        addDebugLog("GT913: ROM ap10.lsi303 loaded in constructor ("
-                    + juce::String(engine.getRomSize() / 1024) + " KB)!");
+        addDebugLog("GT913: Auto-loaded ROM from plugin folder: " + romFile.getFullPathName()
+                    + " (" + juce::String(engine.getRomSize() / 1024) + " KB)!");
     }
 }
 
@@ -81,14 +120,13 @@ void AP10AudioProcessor::prepareToPlay (double sampleRate, int /*samplesPerBlock
 
     addDebugLog("GT913: prepareToPlay at host rate " + juce::String(sampleRate) + " Hz");
 
-    // Only load from file if not already loaded
     if (!engine.isRomLoaded())
     {
-        juce::File romFile("C:\\TMP\\ap10.lsi303");
+        juce::File romFile = getDefaultRomFile();
         if (romFile.existsAsFile() && engine.loadAndDecryptRom(romFile, false))
         {
-            addDebugLog("GT913: ROM loaded in prepareToPlay ("
-                        + juce::String(engine.getRomSize() / 1024) + " KB)!");
+            addDebugLog("GT913: Auto-loaded ROM in prepareToPlay from: " + romFile.getFullPathName()
+                        + " (" + juce::String(engine.getRomSize() / 1024) + " KB)!");
         }
     }
 
@@ -98,7 +136,7 @@ void AP10AudioProcessor::prepareToPlay (double sampleRate, int /*samplesPerBlock
     }
     else
     {
-        addDebugLog("GT913: ROM not loaded yet. Please click 'Load ROM' button in GUI.");
+        addDebugLog("GT913: ROM not loaded yet. Please place ap10.lsi303 in plugin folder or click 'Load ROM'.");
     }
 }
 
@@ -121,7 +159,6 @@ void AP10AudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::M
     juce::ScopedNoDenormals noDenormals;
     buffer.clear();
 
-    // 1. Process MIDI Events
     for (const auto metadata : midiMessages)
     {
         auto msg = metadata.getMessage();
@@ -141,17 +178,17 @@ void AP10AudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::M
         }
         else if (msg.isController())
         {
-            if (msg.getControllerNumber() == 64) // Sustain Pedal
+            if (msg.getControllerNumber() == 64)
             {
                 bool down = msg.getControllerValue() >= 64;
                 engine.setDamperPedal(down);
             }
-            else if (msg.getControllerNumber() == 67) // Soft Pedal
+            else if (msg.getControllerNumber() == 67)
             {
                 bool down = msg.getControllerValue() >= 64;
                 engine.setSoftPedal(down);
             }
-            else if (msg.getControllerNumber() == 123) // All Notes Off
+            else if (msg.getControllerNumber() == 123)
             {
                 engine.reset();
             }
@@ -162,7 +199,6 @@ void AP10AudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::M
         }
     }
 
-    // 2. Synthesize audio with downsampling from GT913 rate to Host Rate
     auto* channelDataLeft  = buffer.getWritePointer(0);
     auto* channelDataRight = buffer.getWritePointer(1);
 
@@ -184,7 +220,6 @@ void AP10AudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::M
             int64_t stepLeft = 0;
             int64_t stepRight = 0;
 
-            // Mix all 24 voices
             for (int v = 0; v < GT913Engine::MAX_VOICES; ++v)
             {
                 auto& voice = engine.voices[v];
@@ -213,8 +248,6 @@ void AP10AudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::M
             float rawL = static_cast<float>(accumulatedLeft / subSamplesMixed)  / 45000000000.0f;
             float rawR = static_cast<float>(accumulatedRight / subSamplesMixed) / 45000000000.0f;
 
-            // 2-pole cascaded reconstruction low-pass filter (~12kHz at 114.5kHz internal rate)
-            // Emulates hardware Casio AP-10 analog filter and eliminates ADPCM switching & downsampling noise
             lpfLeft1 += lpfAlpha * (rawL - lpfLeft1);
             lpfLeft2 += lpfAlpha * (lpfLeft1 - lpfLeft2);
             lpfRight1 += lpfAlpha * (rawR - lpfRight1);
