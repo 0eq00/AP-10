@@ -3,6 +3,8 @@
 A C++ VST3 Digital Piano plugin built with JUCE, emulating the Casio AP-10 / GT913 sound engine and 24-voice ADPCM architecture.  
 This is a port of gt913.cpp from https://github.com/mamedev/mame as a JUCE plugin, and was primarily written using Google AI Studio. It is low-latency and real-time playable, but the release curve and other aspects are still incomplete.
 
+https://github.com/user-attachments/assets/dee0ccda-fb78-4702-9c58-250a54813907
+
 ## Requirements
 
 - AP-10 ROM file (`ap10.lsi303`)  
