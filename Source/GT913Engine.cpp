@@ -776,7 +776,7 @@ void GT913Engine::noteOn(int midiNote, int velocity)
     v.m_is_releasing = false;
 
     const auto& preset = getCurrentPreset();
-    const PianoKeyParam* activeKeyMap = preset.key_map;
+    const PianoKeyParam* activeKeyMap = getKeyMapForCurrentPreset();
 
     if (activeKeyMap != nullptr)
     {
