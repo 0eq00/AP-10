@@ -93,6 +93,11 @@ public:
     static const PianoKeyParam organ_key_map[88];
     static const PianoKeyParam strings_key_map[88];
 
+    // Authentic Velocity-to-Target Volume mapping (from 11.Velocity.csv)
+    // 5 Presets x 128 Velocity steps (0..127)
+    static const uint32_t velocity_volume_target[5][128];
+    static uint32_t getVelocityVolumeTarget(int presetIndex, int velocity);
+
     static const TonePreset presets[5];
     TonePreset mod_presets[5];
 

@@ -66,7 +66,7 @@ AP10AudioProcessorEditor::AP10AudioProcessorEditor (AP10AudioProcessor& p)
 
     addAndMakeVisible(voiceCountLabel);
     voiceCountLabel.setText("Voices: 0 / 24", juce::dontSendNotification);
-    voiceCountLabel.setColour(juce::Label::textColourId, juce::Colours::cyan);
+    voiceCountLabel.setColour(juce::Label::textColourId, juce::Colour(0xff4ade80));
     voiceCountLabel.setFont(juce::FontOptions(13.0f));
 
     addAndMakeVisible(toneLabel);
@@ -102,7 +102,7 @@ AP10AudioProcessorEditor::AP10AudioProcessorEditor (AP10AudioProcessor& p)
 
     // Envelope controls setup
     addAndMakeVisible(envTitleLabel);
-    envTitleLabel.setColour(juce::Label::textColourId, juce::Colour(0xfff59e0b));
+    envTitleLabel.setColour(juce::Label::textColourId, juce::Colours::lightgrey );
     envTitleLabel.setFont(juce::FontOptions(11.0f, juce::Font::bold));
 
     addAndMakeVisible(decayLabel);
