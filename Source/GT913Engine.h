@@ -50,6 +50,7 @@ public:
 
         bool     m_is_releasing = false;
         int      m_env_stage = 0; // 0: idle, 1: attack, 2: decay, 3: sustain, 4: release
+        int      m_preset_id = 0; // 0: Piano, 1: E.Piano, 2: Harpsichord, 3: Organ, 4: Strings
         uint32_t m_decay_rate = 0x00001000;
         uint32_t m_release_rate = 0x00080000;
         uint32_t m_sustain_level = 0;
@@ -97,6 +98,18 @@ public:
     // 5 Presets x 128 Velocity steps (0..127)
     static const uint32_t velocity_volume_target[5][128];
     static uint32_t getVelocityVolumeTarget(int presetIndex, int velocity);
+
+    // Preset calibration volume trim multipliers (Index 0: Piano, 1: E.Piano, 2: Harpsichord, 3: Organ, 4: Strings)
+    // Matched to MAME AP-10 recording loudness ratios:
+    // Piano:       +0.0 dB (1.000x)
+    // E.Piano:     -5.1 dB (0.556x)
+    // Harpsichord: -3.5 dB (0.668x)
+    // Pipe Organ:  -1.1 dB (0.881x)
+    // Strings:     +4.5 dB (1.679x)
+    float preset_volume_gain[5] = { 1.000f, 0.556f, 0.668f, 0.881f, 1.679f };
+    void setPresetVolumeGain(int presetIndex, float gainLinear);
+    void setPresetVolumeDb(int presetIndex, float gainDb);
+    float getPresetVolumeGain(int presetIndex) const;
 
     static const TonePreset presets[5];
     TonePreset mod_presets[5];

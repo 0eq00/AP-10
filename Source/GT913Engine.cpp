@@ -487,7 +487,7 @@ const GT913Engine::TonePreset GT913Engine::presets[5] = {
     { "Grand Piano",  piano_key_map,       0x00001000, 0x00010000, 0 },
     { "E. Piano",     epiano_key_map,      0x00000C00, 0x00070000, 0 },
     { "Harpsichord",  harpsichord_key_map, 0x00002000, 0x00010000, 0 },
-    { "Pipe Organ",   organ_key_map,       0x00000200, 0x00010000, 0x50000000 },
+    { "Pipe Organ",   organ_key_map,       0x00000200, 0x00010000, 0x70000000 },
     { "Strings",      strings_key_map,     0x00000100, 0x00010000, 0x56000000 }
 };
 
@@ -603,6 +603,13 @@ uint32_t GT913Engine::getVelocityVolumeTarget(int presetIndex, int velocity)
 
 GT913Engine::GT913Engine()
 {
+    // Calibrated relative preset loudness gains matching MAME AP-10 recordings:
+    preset_volume_gain[0] = 1.000f; // Piano (0.0 dB reference)
+    preset_volume_gain[1] = 0.556f; // E. Piano (-5.1 dB)
+    preset_volume_gain[2] = 0.668f; // Harpsichord (-3.5 dB)
+    preset_volume_gain[3] = 0.881f; // Pipe Organ (-1.1 dB)
+    preset_volume_gain[4] = 1.679f; // Strings (+4.5 dB)
+
     for (int i = 0; i < 5; ++i)
     {
         mod_presets[i] = presets[i];
@@ -640,6 +647,27 @@ void GT913Engine::setEnvelopeParams(int presetIndex, uint32_t decay, uint32_t re
         mod_presets[presetIndex].release_rate = release;
         mod_presets[presetIndex].sustain_level = sustain;
     }
+}
+
+void GT913Engine::setPresetVolumeGain(int presetIndex, float gainLinear)
+{
+    if (presetIndex >= 0 && presetIndex < 5)
+    {
+        preset_volume_gain[presetIndex] = std::clamp(gainLinear, 0.05f, 4.0f);
+    }
+}
+
+void GT913Engine::setPresetVolumeDb(int presetIndex, float gainDb)
+{
+    float lin = std::pow(10.0f, gainDb / 20.0f);
+    setPresetVolumeGain(presetIndex, lin);
+}
+
+float GT913Engine::getPresetVolumeGain(int presetIndex) const
+{
+    if (presetIndex >= 0 && presetIndex < 5)
+        return preset_volume_gain[presetIndex];
+    return 1.0f;
 }
 
 void GT913Engine::reset()
@@ -774,6 +802,7 @@ void GT913Engine::noteOn(int midiNote, int velocity)
     v.m_midi_note = midiNote;
     v.m_velocity = velocity;
     v.m_is_releasing = false;
+    v.m_preset_id = current_preset;
 
     const auto& preset = getCurrentPreset();
     const PianoKeyParam* activeKeyMap = getKeyMapForCurrentPreset();
@@ -1006,7 +1035,8 @@ void GT913Engine::mix_sample(Voice& v, int64_t& left, int64_t& right)
     const uint32_t env_level = static_cast<uint32_t>(volume_ramp[env]) +
         (((volume_ramp[env + 1] - volume_ramp[env]) * env_step) >> 11);
 
-    const int64_t sample = (static_cast<int64_t>(v.m_sample) + (v.m_sample_next * step / 8)) * v.m_gain * env_level;
+    const float presetGain = (v.m_preset_id >= 0 && v.m_preset_id < 5) ? preset_volume_gain[v.m_preset_id] : 1.0f;
+    const int64_t sample = static_cast<int64_t>((static_cast<int64_t>(v.m_sample) + (v.m_sample_next * step / 8)) * v.m_gain * env_level * presetGain);
 
     left  += sample * v.m_balance[0];
     right += sample * v.m_balance[1];
