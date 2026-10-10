@@ -484,11 +484,11 @@ const GT913Engine::PianoKeyParam GT913Engine::strings_key_map[88] = {
 };
 
 const GT913Engine::TonePreset GT913Engine::presets[5] = {
-    { "Grand Piano",  piano_key_map,       0x00001000, 0x00010000, 0 },
-    { "E. Piano",     epiano_key_map,      0x00000C00, 0x00070000, 0 },
-    { "Harpsichord",  harpsichord_key_map, 0x00002000, 0x00010000, 0 },
-    { "Pipe Organ",   organ_key_map,       0x00000200, 0x00010000, 0x70000000 },
-    { "Strings",      strings_key_map,     0x00000100, 0x00010000, 0x56000000 }
+    { "Grand Piano",  piano_key_map,       0x00001000, 0x00010000, 0          },
+    { "E. Piano",     epiano_key_map,      0x00001700, 0x0001C000, 0          },
+    { "Harpsichord",  harpsichord_key_map, 0x00001C00, 0x00023600, 0          },
+    { "Pipe Organ",   organ_key_map,       0x00000280, 0x00010000, 0x68000000 },
+    { "Strings",      strings_key_map,     0x00000240, 0x00007000, 0x4F800000 }
 };
 
 const uint32_t GT913Engine::velocity_volume_target[5][128] = {
@@ -604,11 +604,11 @@ uint32_t GT913Engine::getVelocityVolumeTarget(int presetIndex, int velocity)
 GT913Engine::GT913Engine()
 {
     // Calibrated relative preset loudness gains matching MAME AP-10 recordings:
-    preset_volume_gain[0] = 1.000f; // Piano (0.0 dB reference)
-    preset_volume_gain[1] = 0.556f; // E. Piano (-5.1 dB)
-    preset_volume_gain[2] = 0.668f; // Harpsichord (-3.5 dB)
-    preset_volume_gain[3] = 0.881f; // Pipe Organ (-1.1 dB)
-    preset_volume_gain[4] = 1.679f; // Strings (+4.5 dB)
+    preset_volume_gain[0] = 1.172f; // Piano
+    preset_volume_gain[1] = 0.793f; // E. Piano
+    preset_volume_gain[2] = 0.612f; // Harpsichord
+    preset_volume_gain[3] = 1.026f; // Pipe Organ
+    preset_volume_gain[4] = 2.169f; // Strings
 
     for (int i = 0; i < 5; ++i)
     {
