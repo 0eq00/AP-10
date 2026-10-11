@@ -160,7 +160,7 @@ AP10AudioProcessorEditor::AP10AudioProcessorEditor (AP10AudioProcessor& p)
     keyboardComponent.setColour(juce::MidiKeyboardComponent::keyDownOverlayColourId, juce::Colour(0x804ade80)); // emerald green on key press
     keyboardComponent.setColour(juce::MidiKeyboardComponent::shadowColourId, juce::Colour(0x40000000));
 
-    // 6. Console Output (shortened to ~5 lines)
+    // 6 & 7. Collapsible Console Output (hidden by default, expands downwards on click)
     addAndMakeVisible(consoleOutput);
     consoleOutput.setMultiLine(true);
     consoleOutput.setReadOnly(true);
@@ -169,9 +169,36 @@ AP10AudioProcessorEditor::AP10AudioProcessorEditor (AP10AudioProcessor& p)
     consoleOutput.setColour(juce::TextEditor::backgroundColourId, juce::Colour(0xff18181b));
     consoleOutput.setColour(juce::TextEditor::outlineColourId, juce::Colour(0xff27272a));
     consoleOutput.setColour(juce::TextEditor::textColourId, juce::Colour(0xff4ade80));
+    consoleOutput.setVisible(false);
 
-    // Plugin window size with 88-key keyboard & compact console
-    setSize(680, 326);
+    // Small toggle button at the bottom-right corner
+    addAndMakeVisible(toggleConsoleButton);
+    toggleConsoleButton.setButtonText("Log " + juce::String::fromUTF8("â¼")); // "Log ▼"
+    toggleConsoleButton.setTooltip("Show / Hide Debug Console");
+    toggleConsoleButton.setColour(juce::TextButton::buttonColourId, juce::Colour(0xff18181b));
+    toggleConsoleButton.setColour(juce::TextButton::buttonOnColourId, juce::Colour(0xff27272a));
+    toggleConsoleButton.setColour(juce::TextButton::textColourOffId, juce::Colour(0xffa1a1aa));
+    toggleConsoleButton.setColour(juce::TextButton::textColourOnId, juce::Colour(0xff4ade80));
+
+    toggleConsoleButton.onClick = [this]()
+    {
+        isConsoleExpanded = !isConsoleExpanded;
+        if (isConsoleExpanded)
+        {
+            toggleConsoleButton.setButtonText("Log " + juce::String::fromUTF8("â²")); // "Log ▲"
+            consoleOutput.setVisible(true);
+            setSize(680, 332);
+        }
+        else
+        {
+            toggleConsoleButton.setButtonText("Log " + juce::String::fromUTF8("â¼")); // "Log ▼"
+            consoleOutput.setVisible(false);
+            setSize(680, 246);
+        }
+    };
+
+    // Plugin window size with collapsed console by default (246px)
+    setSize(680, 246);
     startTimerHz(25);
 }
 
@@ -304,9 +331,22 @@ void AP10AudioProcessorEditor::resized()
     voiceCountLabel.setBounds(240, 92, 120, 18);
 
     // 88-Key Interactive Piano Keyboard (placed directly above the console)
-    keyboardComponent.setBounds(15, 150, getWidth() - 30, 68);
+    keyboardComponent.setBounds(15, 150, getWidth() - 30, 64);
     keyboardComponent.setKeyWidth(static_cast<float>(getWidth() - 30) / 52.0f);
 
-    // 6. Console Output at the bottom (shortened to ~5 lines, 80px height)
-    consoleOutput.setBounds(15, 228, getWidth() - 30, 80);
+    // 7. Collapsible console output & bottom-right toggle button
+    int toggleW = 54;
+    int toggleH = 18;
+
+    if (isConsoleExpanded)
+    {
+        // 6. Console Output (shortened to ~5 lines, 80px height)
+        consoleOutput.setBounds(15, 222, getWidth() - 30, 80);
+        toggleConsoleButton.setBounds(getWidth() - 15 - toggleW, 307, toggleW, toggleH);
+    }
+    else
+    {
+        consoleOutput.setBounds(0, 0, 0, 0);
+        toggleConsoleButton.setBounds(getWidth() - 15 - toggleW, 221, toggleW, toggleH);
+    }
 }

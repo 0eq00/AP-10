@@ -49,6 +49,9 @@ private:
     // 88-Key Interactive Piano Keyboard (placed above the console)
     juce::MidiKeyboardComponent keyboardComponent;
 
+    // Collapsible Console Output (hidden by default, toggled via bottom-right button)
+    bool isConsoleExpanded { false };
+    juce::TextButton toggleConsoleButton;
     juce::TextEditor consoleOutput;
 
     std::unique_ptr<juce::FileChooser> fileChooser;
