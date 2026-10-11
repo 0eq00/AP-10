@@ -63,7 +63,7 @@ AP10AudioProcessor::AP10AudioProcessor()
     juce::File romFile = getDefaultRomFile();
     if (romFile.existsAsFile() && engine.loadAndDecryptRom(romFile, false))
     {
-        addDebugLog("GT913: Auto-loaded ROM from plugin folder: " + romFile.getFullPathName()
+        addDebugLog("GT913: Loaded ROM : " + romFile.getFullPathName()
                     + " (" + juce::String(engine.getRomSize() / 1024) + " KB)!");
     }
 }
@@ -125,7 +125,7 @@ void AP10AudioProcessor::prepareToPlay (double sampleRate, int /*samplesPerBlock
         juce::File romFile = getDefaultRomFile();
         if (romFile.existsAsFile() && engine.loadAndDecryptRom(romFile, false))
         {
-            addDebugLog("GT913: Auto-loaded ROM in prepareToPlay from: " + romFile.getFullPathName()
+            addDebugLog("GT913: Loaded ROM : " + romFile.getFullPathName()
                         + " (" + juce::String(engine.getRomSize() / 1024) + " KB)!");
         }
     }
@@ -168,13 +168,13 @@ void AP10AudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::M
             int note = msg.getNoteNumber();
             int vel  = msg.getVelocity();
             engine.noteOn(note, vel);
-            addDebugLog("NoteOn: " + juce::String(note) + " vel: " + juce::String(vel));
+//          addDebugLog("NoteOn: " + juce::String(note) + " vel: " + juce::String(vel));
         }
         else if (msg.isNoteOff())
         {
             int note = msg.getNoteNumber();
             engine.noteOff(note);
-            addDebugLog("NoteOff: " + juce::String(note));
+//          addDebugLog("NoteOff: " + juce::String(note));
         }
         else if (msg.isController())
         {

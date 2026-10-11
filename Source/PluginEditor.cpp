@@ -231,7 +231,7 @@ void AP10AudioProcessorEditor::paint (juce::Graphics& g)
         bool active = engine.voices[i].m_enable;
         if (active)
         {
-            g.setColour(juce::Colours::cyan);
+            g.setColour(juce::Colour(0xff4ade80));
             g.fillRoundedRectangle((float)x, (float)y, (float)ledW, (float)ledH, 3.0f);
             g.setColour(juce::Colours::black);
             g.setFont(juce::FontOptions(9.0f, juce::Font::bold));
