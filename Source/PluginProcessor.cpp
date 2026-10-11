@@ -171,13 +171,13 @@ void AP10AudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::M
             int note = msg.getNoteNumber();
             int vel  = msg.getVelocity();
             engine.noteOn(note, vel);
-//          addDebugLog("NoteOn: " + juce::String(note) + " vel: " + juce::String(vel));
+            addDebugLog("NoteOn: " + juce::String(note) + " vel: " + juce::String(vel));
         }
         else if (msg.isNoteOff())
         {
             int note = msg.getNoteNumber();
             engine.noteOff(note);
-//          addDebugLog("NoteOff: " + juce::String(note));
+            addDebugLog("NoteOff: " + juce::String(note));
         }
         else if (msg.isController())
         {

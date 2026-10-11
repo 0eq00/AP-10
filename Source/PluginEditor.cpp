@@ -173,7 +173,7 @@ AP10AudioProcessorEditor::AP10AudioProcessorEditor (AP10AudioProcessor& p)
 
     // Small toggle button at the bottom-right corner
     addAndMakeVisible(toggleConsoleButton);
-    toggleConsoleButton.setButtonText("Log " + juce::String::fromUTF8("â¼")); // "Log ▼"
+    toggleConsoleButton.setButtonText("Log " + juce::String::fromUTF8("▼"));
     toggleConsoleButton.setTooltip("Show / Hide Debug Console");
     toggleConsoleButton.setColour(juce::TextButton::buttonColourId, juce::Colour(0xff18181b));
     toggleConsoleButton.setColour(juce::TextButton::buttonOnColourId, juce::Colour(0xff27272a));
@@ -185,13 +185,13 @@ AP10AudioProcessorEditor::AP10AudioProcessorEditor (AP10AudioProcessor& p)
         isConsoleExpanded = !isConsoleExpanded;
         if (isConsoleExpanded)
         {
-            toggleConsoleButton.setButtonText("Log " + juce::String::fromUTF8("â²")); // "Log ▲"
+            toggleConsoleButton.setButtonText("Log " + juce::String::fromUTF8("▲"));
             consoleOutput.setVisible(true);
             setSize(680, 332);
         }
         else
         {
-            toggleConsoleButton.setButtonText("Log " + juce::String::fromUTF8("â¼")); // "Log ▼"
+            toggleConsoleButton.setButtonText("Log " + juce::String::fromUTF8("▼"));
             consoleOutput.setVisible(false);
             setSize(680, 246);
         }
@@ -253,15 +253,11 @@ void AP10AudioProcessorEditor::paint (juce::Graphics& g)
 {
     g.fillAll(juce::Colour(0xff09090b));
 
-    // Top header bar background & border (console frame grey)
-    g.setColour(juce::Colour(0xff18181b));
-    g.fillRect(0, 0, getWidth(), 50);
+    // Top header bar background & border
     g.setColour(juce::Colour(0xff27272a));
-    g.drawRect(0, 0, getWidth(), 50, 1);
-
-    // Envelope tuner bar background
-    g.setColour(juce::Colour(0xff121214));
-    g.fillRect(0, 50, getWidth(), 35);
+    g.fillRect(4, 4, getWidth()-8, 83);
+    g.setColour(juce::Colours::gold);
+    g.drawRect(4, 4, getWidth()-8, 83, 1);
 
     // 4 & 5. Dividing line between ENVELOPE PARAMS and POLYPHONY MATRIX in console border grey
     g.setColour(juce::Colour(0xff27272a));
