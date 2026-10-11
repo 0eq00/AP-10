@@ -23,9 +23,10 @@ uint32_t AP10AudioProcessorEditor::parseHex32(const juce::String& text)
 }
 
 AP10AudioProcessorEditor::AP10AudioProcessorEditor (AP10AudioProcessor& p)
-    : AudioProcessorEditor (&p), audioProcessor (p)
+    : AudioProcessorEditor (&p), audioProcessor (p),
+      keyboardComponent (p.getKeyboardState(), juce::MidiKeyboardComponent::horizontalKeyboard)
 {
-    addAndMakeVisible(loadRomButton);
+    // 1. loadRomButton: Code logic preserved for ROM selection & loading, hidden from GUI per user request
     loadRomButton.onClick = [this]()
     {
         juce::File initialRomFile = AP10AudioProcessor::getDefaultRomFile();
@@ -58,51 +59,57 @@ AP10AudioProcessorEditor::AP10AudioProcessorEditor (AP10AudioProcessor& p)
             }
         });
     };
+    // Note: addAndMakeVisible(loadRomButton) is omitted to hide button from GUI
 
     addAndMakeVisible(statusLabel);
     statusLabel.setText("AP-10 (GT913 Sound Engine)", juce::dontSendNotification);
     statusLabel.setColour(juce::Label::textColourId, juce::Colours::white);
-    statusLabel.setFont(juce::FontOptions(15.0f, juce::Font::bold));
+    statusLabel.setFont(juce::FontOptions(14.0f, juce::Font::bold));
 
+    // 2. voiceCountLabel: Font size matched to 11.0f (placed next to matrix title)
     addAndMakeVisible(voiceCountLabel);
     voiceCountLabel.setText("Voices: 0 / 24", juce::dontSendNotification);
     voiceCountLabel.setColour(juce::Label::textColourId, juce::Colour(0xff4ade80));
-    voiceCountLabel.setFont(juce::FontOptions(13.0f));
+    voiceCountLabel.setFont(juce::FontOptions(11.0f));
 
-    addAndMakeVisible(toneLabel);
-    toneLabel.setText("Tone:", juce::dontSendNotification);
-    toneLabel.setColour(juce::Label::textColourId, juce::Colour(0xffd4d4d8));
-    toneLabel.setFont(juce::FontOptions(12.0f, juce::Font::bold));
-
-    addAndMakeVisible(toneSelector);
-    toneSelector.addItem("1: Grand Piano", 1);
-    toneSelector.addItem("2: E. Piano", 2);
-    toneSelector.addItem("3: Harpsichord", 3);
-    toneSelector.addItem("4: Pipe Organ", 4);
-    toneSelector.addItem("5: Strings", 5);
-    toneSelector.setSelectedId(audioProcessor.getEngine().current_preset + 1, juce::dontSendNotification);
-
-    toneSelector.onChange = [this]()
+    // 3. 5 Tone Preset Toggle Buttons (replacing ComboBox)
+    const juce::String buttonNames[5] = { "Piano", "E. Piano", "Harpsichord", "Pipe Organ", "Strings" };
+    for (int i = 0; i < 5; ++i)
     {
-        int selectedIndex = toneSelector.getSelectedId() - 1;
-        if (selectedIndex >= 0 && selectedIndex < 5)
+        toneButtons[i].setButtonText(buttonNames[i]);
+        addAndMakeVisible(toneButtons[i]);
+        toneButtons[i].setRadioGroupId(1001);
+        toneButtons[i].setClickingTogglesState(true);
+        toneButtons[i].setColour(juce::TextButton::buttonColourId, juce::Colour(0xff18181b));
+        toneButtons[i].setColour(juce::TextButton::buttonOnColourId, juce::Colour(0xff27272a));
+        toneButtons[i].setColour(juce::TextButton::textColourOffId, juce::Colour(0xffa1a1aa));
+        toneButtons[i].setColour(juce::TextButton::textColourOnId, juce::Colour(0xff4ade80));
+
+        toneButtons[i].onClick = [this, i]()
         {
-            audioProcessor.getEngine().setTone(selectedIndex);
-            audioProcessor.setCurrentProgram(selectedIndex);
+            if (toneButtons[i].getToggleState())
+            {
+                audioProcessor.getEngine().setTone(i);
+                audioProcessor.setCurrentProgram(i);
 
-            const auto& preset = audioProcessor.getEngine().getCurrentPreset();
-            decayEditor.setText(toHex32(preset.decay_rate), juce::dontSendNotification);
-            releaseEditor.setText(toHex32(preset.release_rate), juce::dontSendNotification);
-            sustainEditor.setText(toHex32(preset.sustain_level), juce::dontSendNotification);
+                const auto& preset = audioProcessor.getEngine().getCurrentPreset();
+                decayEditor.setText(toHex32(preset.decay_rate), juce::dontSendNotification);
+                releaseEditor.setText(toHex32(preset.release_rate), juce::dontSendNotification);
+                sustainEditor.setText(toHex32(preset.sustain_level), juce::dontSendNotification);
 
-            audioProcessor.addDebugLog("GUI Tone Changed: " + juce::String(preset.name));
-            statusLabel.setText("Tone: " + juce::String(preset.name), juce::dontSendNotification);
-        }
-    };
+                audioProcessor.addDebugLog("GUI Tone Changed: " + juce::String(preset.name));
+                statusLabel.setText("Tone: " + juce::String(preset.name), juce::dontSendNotification);
+            }
+        };
+    }
+
+    int initTone = audioProcessor.getEngine().current_preset;
+    if (initTone >= 0 && initTone < 5)
+        toneButtons[initTone].setToggleState(true, juce::dontSendNotification);
 
     // Envelope controls setup
     addAndMakeVisible(envTitleLabel);
-    envTitleLabel.setColour(juce::Label::textColourId, juce::Colours::lightgrey );
+    envTitleLabel.setColour(juce::Label::textColourId, juce::Colours::lightgrey);
     envTitleLabel.setFont(juce::FontOptions(11.0f, juce::Font::bold));
 
     addAndMakeVisible(decayLabel);
@@ -141,15 +148,30 @@ AP10AudioProcessorEditor::AP10AudioProcessorEditor (AP10AudioProcessor& p)
     releaseEditor.onTextChange = updateEngineEnvelope;
     sustainEditor.onTextChange = updateEngineEnvelope;
 
+    // 88-Key Interactive Piano Keyboard (playable with mouse, velocity varies with click Y position)
+    addAndMakeVisible(keyboardComponent);
+    keyboardComponent.setAvailableRange(21, 108); // 88 keys (MIDI 21 A0 to 108 C8)
+    keyboardComponent.setLowestVisibleKey(21);
+    keyboardComponent.setVelocity(0.8f, true); // true = velocity varies based on vertical click position
+    keyboardComponent.setColour(juce::MidiKeyboardComponent::whiteNoteColourId, juce::Colour(0xfff4f4f5));
+    keyboardComponent.setColour(juce::MidiKeyboardComponent::blackNoteColourId, juce::Colour(0xff18181b));
+    keyboardComponent.setColour(juce::MidiKeyboardComponent::keySeparatorLineColourId, juce::Colour(0xff27272a));
+    keyboardComponent.setColour(juce::MidiKeyboardComponent::mouseOverKeyOverlayColourId, juce::Colour(0x204ade80));
+    keyboardComponent.setColour(juce::MidiKeyboardComponent::keyDownOverlayColourId, juce::Colour(0x804ade80)); // emerald green on key press
+    keyboardComponent.setColour(juce::MidiKeyboardComponent::shadowColourId, juce::Colour(0x40000000));
+
+    // 6. Console Output (shortened to ~5 lines)
     addAndMakeVisible(consoleOutput);
     consoleOutput.setMultiLine(true);
     consoleOutput.setReadOnly(true);
     consoleOutput.setScrollbarsShown(true);
     consoleOutput.setCaretVisible(false);
     consoleOutput.setColour(juce::TextEditor::backgroundColourId, juce::Colour(0xff18181b));
+    consoleOutput.setColour(juce::TextEditor::outlineColourId, juce::Colour(0xff27272a));
     consoleOutput.setColour(juce::TextEditor::textColourId, juce::Colour(0xff4ade80));
 
-    setSize(680, 480);
+    // Plugin window size with 88-key keyboard & compact console
+    setSize(680, 326);
     startTimerHz(25);
 }
 
@@ -169,10 +191,14 @@ void AP10AudioProcessorEditor::timerCallback()
     int active = audioProcessor.getActiveVoiceCount();
     voiceCountLabel.setText("Voices: " + juce::String(active) + " / 24", juce::dontSendNotification);
 
-    int currentToneId = audioProcessor.getEngine().current_preset + 1;
-    if (toneSelector.getSelectedId() != currentToneId)
+    // Sync toggle button states if preset changed externally
+    int currentToneId = audioProcessor.getEngine().current_preset;
+    if (currentToneId >= 0 && currentToneId < 5)
     {
-        toneSelector.setSelectedId(currentToneId, juce::dontSendNotification);
+        if (!toneButtons[currentToneId].getToggleState())
+        {
+            toneButtons[currentToneId].setToggleState(true, juce::dontSendNotification);
+        }
     }
 
     const auto& preset = audioProcessor.getEngine().getCurrentPreset();
@@ -200,21 +226,24 @@ void AP10AudioProcessorEditor::paint (juce::Graphics& g)
 {
     g.fillAll(juce::Colour(0xff09090b));
 
-    g.setColour(juce::Colour(0xff27272a));
+    // Top header bar background & border (console frame grey)
+    g.setColour(juce::Colour(0xff18181b));
     g.fillRect(0, 0, getWidth(), 50);
-
-    g.setColour(juce::Colours::gold);
+    g.setColour(juce::Colour(0xff27272a));
     g.drawRect(0, 0, getWidth(), 50, 1);
 
-    // Draw envelope tuner bar background
-    g.setColour(juce::Colour(0xff18181b));
+    // Envelope tuner bar background
+    g.setColour(juce::Colour(0xff121214));
     g.fillRect(0, 50, getWidth(), 35);
-    g.setColour(juce::Colour(0xff27272a));
-    g.drawRect(0, 50, getWidth(), 35, 1);
 
+    // 4 & 5. Dividing line between ENVELOPE PARAMS and POLYPHONY MATRIX in console border grey
+    g.setColour(juce::Colour(0xff27272a));
+    g.drawHorizontalLine(85, 0.0f, static_cast<float>(getWidth()));
+
+    // 2. Section title for 24-Voice Polyphony Matrix
     g.setColour(juce::Colours::lightgrey);
     g.setFont(juce::FontOptions(11.0f));
-    g.drawText("GT913 24-VOICE POLYPHONY MATRIX:", 15, 92, 300, 18, juce::Justification::left);
+    g.drawText("GT913 24-VOICE POLYPHONY MATRIX", 15, 92, 220, 18, juce::Justification::left);
 
     int startX = 15;
     int startY = 114;
@@ -250,12 +279,17 @@ void AP10AudioProcessorEditor::paint (juce::Graphics& g)
 
 void AP10AudioProcessorEditor::resized()
 {
-    statusLabel.setBounds(15, 5, 230, 24);
-    voiceCountLabel.setBounds(15, 26, 180, 20);
+    statusLabel.setBounds(15, 12, 185, 26);
 
-    toneLabel.setBounds(getWidth() - 410, 10, 45, 30);
-    toneSelector.setBounds(getWidth() - 365, 10, 195, 30);
-    loadRomButton.setBounds(getWidth() - 160, 10, 145, 30);
+    // 3. 5 Tone toggle buttons on top header bar
+    int btnW = 88;
+    int btnH = 28;
+    int btnGap = 4;
+    int btnStartX = getWidth() - 15 - (5 * btnW + 4 * btnGap); // aligned to right
+    for (int i = 0; i < 5; ++i)
+    {
+        toneButtons[i].setBounds(btnStartX + i * (btnW + btnGap), 11, btnW, btnH);
+    }
 
     // Envelope tuner bar layout (y: 50..85)
     envTitleLabel.setBounds(15, 57, 130, 20);
@@ -266,5 +300,13 @@ void AP10AudioProcessorEditor::resized()
     sustainLabel.setBounds(430, 57, 50, 20);
     sustainEditor.setBounds(480, 54, 85, 22);
 
-    consoleOutput.setBounds(15, 160, getWidth() - 30, getHeight() - 175);
+    // 2. voiceCountLabel placed right next to "GT913 24-VOICE POLYPHONY MATRIX"
+    voiceCountLabel.setBounds(240, 92, 120, 18);
+
+    // 88-Key Interactive Piano Keyboard (placed directly above the console)
+    keyboardComponent.setBounds(15, 150, getWidth() - 30, 68);
+    keyboardComponent.setKeyWidth(static_cast<float>(getWidth() - 30) / 52.0f);
+
+    // 6. Console Output at the bottom (shortened to ~5 lines, 80px height)
+    consoleOutput.setBounds(15, 228, getWidth() - 30, 80);
 }

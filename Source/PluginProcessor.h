@@ -50,11 +50,14 @@ public:
     GT913Engine& getEngine() { return engine; }
     int getActiveVoiceCount() const;
 
+    juce::MidiKeyboardState& getKeyboardState() { return keyboardState; }
+
     static juce::File getPluginDirectory();
     static juce::File getDefaultRomFile();
 
 private:
     GT913Engine engine;
+    juce::MidiKeyboardState keyboardState;
 
     double srcRatioCounter = 0.0;
     double hostSampleRate = 44100.0;

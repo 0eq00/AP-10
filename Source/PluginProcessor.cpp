@@ -159,6 +159,9 @@ void AP10AudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::M
     juce::ScopedNoDenormals noDenormals;
     buffer.clear();
 
+    // Process on-screen interactive keyboard state & inject MIDI messages
+    keyboardState.processNextMidiBuffer (midiMessages, 0, buffer.getNumSamples(), true);
+
     for (const auto metadata : midiMessages)
     {
         auto msg = metadata.getMessage();
