@@ -187,18 +187,18 @@ AP10AudioProcessorEditor::AP10AudioProcessorEditor (AP10AudioProcessor& p)
         {
             toggleConsoleButton.setButtonText("Log " + juce::String::fromUTF8("▲"));
             consoleOutput.setVisible(true);
-            setSize(680, 332);
+            setSize(680, 348);
         }
         else
         {
             toggleConsoleButton.setButtonText("Log " + juce::String::fromUTF8("▼"));
             consoleOutput.setVisible(false);
-            setSize(680, 246);
+            setSize(680, 262);
         }
     };
 
-    // Plugin window size with collapsed console by default (246px)
-    setSize(680, 246);
+    // Plugin window size with collapsed console by default (262px)
+    setSize(680, 262);
     startTimerHz(25);
 }
 
@@ -326,8 +326,8 @@ void AP10AudioProcessorEditor::resized()
     // 2. voiceCountLabel placed right next to "GT913 24-VOICE POLYPHONY MATRIX"
     voiceCountLabel.setBounds(240, 92, 120, 18);
 
-    // 88-Key Interactive Piano Keyboard (placed directly above the console)
-    keyboardComponent.setBounds(15, 150, getWidth() - 30, 64);
+    // 88-Key Interactive Piano Keyboard (placed directly above the console, with 10px gap below polyphony LEDs)
+    keyboardComponent.setBounds(15, 160, getWidth() - 30, 64);
     keyboardComponent.setKeyWidth(static_cast<float>(getWidth() - 30) / 52.0f);
 
     // 7. Collapsible console output & bottom-right toggle button
@@ -337,12 +337,12 @@ void AP10AudioProcessorEditor::resized()
     if (isConsoleExpanded)
     {
         // 6. Console Output (shortened to ~5 lines, 80px height)
-        consoleOutput.setBounds(15, 222, getWidth() - 30, 80);
-        toggleConsoleButton.setBounds(getWidth() - 15 - toggleW, 307, toggleW, toggleH);
+        consoleOutput.setBounds(15, 232, getWidth() - 30, 80);
+        toggleConsoleButton.setBounds(getWidth() - 15 - toggleW, 317, toggleW, toggleH);
     }
     else
     {
         consoleOutput.setBounds(0, 0, 0, 0);
-        toggleConsoleButton.setBounds(getWidth() - 15 - toggleW, 221, toggleW, toggleH);
+        toggleConsoleButton.setBounds(getWidth() - 15 - toggleW, 231, toggleW, toggleH);
     }
 }
