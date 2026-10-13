@@ -116,20 +116,15 @@ public:
     // Harpsichord: -3.5 dB (0.668x)
     // Pipe Organ:  -1.1 dB (0.881x)
     // Strings:     +4.5 dB (1.679x)
-    float preset_volume_gain[5] = { 1.000f, 0.556f, 0.668f, 0.881f, 1.679f };
+    const float preset_volume_gain[5] = { 1.04f, 1.09f, 1.04f, 1.05f, 1.04f };
 
-    // Firmware envelope mode (default on). When on, every voice follows the multi-stage
+    // Every voice follows the multi-stage
     // envelope logged from the MAME AP-10 firmware (GT913EnvTables.h) and the decay, sustain
     // and release values in presets[] are ignored. Switching also swaps the preset volume gains.
     static constexpr uint32_t ENV_POLL_PERIOD_TICKS   = 4689; // 40.96 ms at 114483 Hz
     static constexpr uint32_t ENV_ADVANCE_MARGIN_TICKS = 0;    // 0: advance only when the target is reached (best match to the logs)
-    bool     use_firmware_envelope = true;
     bool     poll_phase_random = false;   // false: fixed phase (half a period), true: random phase per note
     uint32_t poll_phase_ticks = ENV_POLL_PERIOD_TICKS / 2; // used when poll_phase_random is false
-    void setUseFirmwareEnvelope(bool on);
-    void setPresetVolumeGain(int presetIndex, float gainLinear);
-    void setPresetVolumeDb(int presetIndex, float gainDb);
-    float getPresetVolumeGain(int presetIndex) const;
 
     static const TonePreset presets[5];
     TonePreset mod_presets[5];
@@ -157,7 +152,6 @@ public:
     static uint32_t calculatePitch(int midiNote, int baseNote, uint32_t basePitch);
 
     void update_envelope(Voice& v);
-    void update_envelope_firmware(Voice& v);
     const GT913EnvZone* findEnvZone(int presetIndex, int midiNote) const;
     void update_sample(Voice& v);
     void mix_sample(Voice& v, int64_t& left, int64_t& right);

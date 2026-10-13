@@ -22,12 +22,6 @@ namespace
         { organ_env_zones,   static_cast<int>(sizeof(organ_env_zones)   / sizeof(organ_env_zones[0]))   },
         { strings_env_zones, static_cast<int>(sizeof(strings_env_zones) / sizeof(strings_env_zones[0])) }
     };
-
-    // Preset volume gains that match the MAME AP-10 recordings when the firmware envelope is used.
-    // These come from fitting the logged envelopes to the recordings (about 1.0 to 1.1 for all tones).
-    // Re-measure with new recordings after building.
-//  const float kFirmwareEnvGain[5] = { 1.04f, 1.10f, 1.00f, 1.05f, 1.03f };
-    const float kFirmwareEnvGain[5] = { 1.04f, 1.09f, 1.04f, 1.05f, 1.04f };
 }
 
 const uint8_t GT913Engine::exp_2_to_3[4] = { 0, 1, 2, 7 };
@@ -624,28 +618,12 @@ uint32_t GT913Engine::getVelocityVolumeTarget(int presetIndex, int velocity)
 
 GT913Engine::GT913Engine()
 {
-    // Calibrated relative preset loudness gains matching MAME AP-10 recordings:
-    preset_volume_gain[0] = 1.000f; // Piano (0.0 dB reference)
-    preset_volume_gain[1] = 0.556f; // E. Piano (-5.1 dB)
-    preset_volume_gain[2] = 0.668f; // Harpsichord (-3.5 dB)
-    preset_volume_gain[3] = 0.881f; // Pipe Organ (-1.1 dB)
-    preset_volume_gain[4] = 1.679f; // Strings (+4.5 dB)
-
     for (int i = 0; i < 5; ++i)
     {
         mod_presets[i] = presets[i];
-        legacy_preset_volume_gain[i] = preset_volume_gain[i];
     }
     setTone(0);
     reset();
-    setUseFirmwareEnvelope(use_firmware_envelope);
-}
-
-void GT913Engine::setUseFirmwareEnvelope(bool on)
-{
-    use_firmware_envelope = on;
-    for (int i = 0; i < 5; ++i)
-        preset_volume_gain[i] = on ? kFirmwareEnvGain[i] : legacy_preset_volume_gain[i];
 }
 
 const GT913EnvZone* GT913Engine::findEnvZone(int presetIndex, int midiNote) const
@@ -701,27 +679,6 @@ void GT913Engine::setEnvelopeParams(int presetIndex, uint32_t decay, uint32_t re
         mod_presets[presetIndex].release_rate = release;
         mod_presets[presetIndex].sustain_level = sustain;
     }
-}
-
-void GT913Engine::setPresetVolumeGain(int presetIndex, float gainLinear)
-{
-    if (presetIndex >= 0 && presetIndex < 5)
-    {
-        preset_volume_gain[presetIndex] = std::clamp(gainLinear, 0.05f, 4.0f);
-    }
-}
-
-void GT913Engine::setPresetVolumeDb(int presetIndex, float gainDb)
-{
-    float lin = std::pow(10.0f, gainDb / 20.0f);
-    setPresetVolumeGain(presetIndex, lin);
-}
-
-float GT913Engine::getPresetVolumeGain(int presetIndex) const
-{
-    if (presetIndex >= 0 && presetIndex < 5)
-        return preset_volume_gain[presetIndex];
-    return 1.0f;
 }
 
 void GT913Engine::reset()
@@ -894,39 +851,23 @@ void GT913Engine::noteOn(int midiNote, int velocity)
         v.m_volume_rate    = keyParam.volume_rate;
         v.m_env_stage      = 1;
 
-        v.m_decay_rate     = preset.decay_rate;
-        v.m_release_rate   = preset.release_rate;
-
-        // Scale sustain level proportionally with velocity target if preset has sustain
-        if (preset.sustain_level > 0 && keyParam.volume_target > 0)
-        {
-            v.m_sustain_level = static_cast<uint32_t>((static_cast<uint64_t>(targetVolume) * preset.sustain_level) / keyParam.volume_target);
-        }
-        else
-        {
-            v.m_sustain_level = 0;
-        }
-
         v.m_balance[0]     = 7;
         v.m_balance[1]     = 7;
 
         // Firmware envelope: the stage words are logged at velocity 127 and scaled by the velocity
         v.m_env_zone = nullptr;
-        if (use_firmware_envelope)
+        const GT913EnvZone* zone = findEnvZone(current_preset, clampedNote);
+        if (zone != nullptr && zone->num_words > 0)
         {
-            const GT913EnvZone* zone = findEnvZone(current_preset, clampedNote);
-            if (zone != nullptr && zone->num_words > 0)
-            {
-                v.m_env_zone      = zone;
-                v.m_env_index     = 0;
-                v.m_t1_v          = targetVolume;
-                v.m_t1_127        = getVelocityVolumeTarget(current_preset, 127);
-                v.m_volume_target = targetVolume;
-                v.m_volume_rate   = gt913_env_rate(zone->words[0]);
-                v.m_release_rate  = gt913_env_rate(zone->release);
-                v.m_poll_timer    = nextPollPhaseTicks();
-                v.m_env_stage     = 1;
-            }
+            v.m_env_zone      = zone;
+            v.m_env_index     = 0;
+            v.m_t1_v          = targetVolume;
+            v.m_t1_127        = getVelocityVolumeTarget(current_preset, 127);
+            v.m_volume_target = targetVolume;
+            v.m_volume_rate   = gt913_env_rate(zone->words[0]);
+            v.m_release_rate  = gt913_env_rate(zone->release);
+            v.m_poll_timer    = nextPollPhaseTicks();
+            v.m_env_stage     = 1;
         }
     }
 }
@@ -970,8 +911,12 @@ void GT913Engine::setSoftPedal(bool down)
     soft_pedal = down;
 }
 
-void GT913Engine::update_envelope_firmware(Voice& v)
+void GT913Engine::update_envelope(Voice& v)
 {
+    if (!v.m_enable) return;
+
+    if (v.m_env_zone == nullptr) return;
+
     // 1. The volume moves toward the target by one rate step per tick, in either direction
     if (v.m_volume_current < v.m_volume_target)
     {
@@ -1014,86 +959,6 @@ void GT913Engine::update_envelope_firmware(Voice& v)
 
     // 3. A stage that ends at zero (final decay or release) ends the voice
     if (v.m_volume_current <= 50 && v.m_volume_target == 0)
-    {
-        v.m_volume_current = 0;
-        v.m_enable = false;
-        v.m_env_stage = 0;
-    }
-}
-
-void GT913Engine::update_envelope(Voice& v)
-{
-    if (!v.m_enable) return;
-
-    if (v.m_env_zone != nullptr)
-    {
-        update_envelope_firmware(v);
-        return;
-    }
-
-    switch (v.m_env_stage)
-    {
-        case 1:
-        {
-            v.m_volume_current += v.m_volume_rate;
-            if (v.m_volume_current >= v.m_volume_target)
-            {
-                v.m_volume_current = v.m_volume_target;
-                v.m_env_stage = 2;
-                v.m_volume_rate = v.m_decay_rate;
-            }
-            break;
-        }
-
-        case 2:
-        {
-            if (v.m_volume_current > v.m_sustain_level + v.m_decay_rate)
-            {
-                v.m_volume_current -= v.m_decay_rate;
-            }
-            else
-            {
-                v.m_volume_current = v.m_sustain_level;
-                if (v.m_sustain_level == 0)
-                {
-                    v.m_volume_current = 0;
-                    v.m_enable = false;
-                    v.m_env_stage = 0;
-                }
-                else
-                {
-                    v.m_env_stage = 3;
-                }
-            }
-            break;
-        }
-
-        case 3:
-        {
-            v.m_volume_current = v.m_sustain_level;
-            break;
-        }
-
-        case 4:
-        {
-            if (v.m_volume_current > v.m_release_rate)
-            {
-                v.m_volume_current -= v.m_release_rate;
-            }
-            else
-            {
-                v.m_volume_current = 0;
-                v.m_enable = false;
-                v.m_env_stage = 0;
-            }
-            break;
-        }
-
-        default:
-            break;
-    }
-
-    if (v.m_volume_current <= 50)
     {
         v.m_volume_current = 0;
         v.m_enable = false;
