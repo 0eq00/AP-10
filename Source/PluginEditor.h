@@ -22,29 +22,14 @@ public:
     void resized() override;
     void timerCallback() override;
 
-    static juce::String toHex32(uint32_t val);
-    static uint32_t parseHex32(const juce::String& text);
-
 private:
     AP10AudioProcessor& audioProcessor;
-
-    // Preserved for ROM loading logic (hidden from GUI per user request)
-    juce::TextButton loadRomButton { "Load ROM (ap10.lsi303)" };
 
     juce::Label statusLabel;
     juce::Label voiceCountLabel;
 
     // 5 Tone Preset Toggle Buttons (replacing ComboBox)
     juce::TextButton toneButtons[5];
-
-    // Envelope parameter controls (decay_rate, release_rate, sustain_level)
-    juce::Label envTitleLabel { {}, "ENVELOPE PARAMS (HEX):" };
-    juce::Label decayLabel { {}, "Decay:" };
-    juce::TextEditor decayEditor;
-    juce::Label releaseLabel { {}, "Release:" };
-    juce::TextEditor releaseEditor;
-    juce::Label sustainLabel { {}, "Sustain:" };
-    juce::TextEditor sustainEditor;
 
     // 88-Key Interactive Piano Keyboard (placed above the console)
     juce::MidiKeyboardComponent keyboardComponent;

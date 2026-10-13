@@ -968,8 +968,8 @@ void GT913Engine::update_envelope(Voice& v)
 
 void GT913Engine::update_sample(Voice& v)
 {
-    v.m_sample += v.m_sample_next;
-    v.m_sample = std::clamp(v.m_sample, -32768, 32767);
+    // MAME keeps m_sample and m_sample_next as s16, so the sum wraps around (it is not clamped)
+    v.m_sample = static_cast<int16_t>(v.m_sample + v.m_sample_next);
 
     if (v.m_addr_current >= v.m_addr_end)
     {
@@ -980,16 +980,20 @@ void GT913Engine::update_sample(Voice& v)
         }
 
         v.m_addr_current = v.m_addr_loop;
+
+        // The last 12 bytes of each sample hold the sample and exponent values that apply
+        // after processing the first 16-bit word following the loop point.
         const uint32_t addr_loop_data = (v.m_addr_end + 1) & ~1;
-        const int16_t loop_sample = static_cast<int16_t>(read_word(addr_loop_data));
-        v.m_sample_next = static_cast<int32_t>(loop_sample) - v.m_sample;
+        v.m_sample_next = static_cast<int16_t>(read_word(addr_loop_data) - v.m_sample);
         v.m_exp = read_word(addr_loop_data + 10) & 7;
 
         if (!(v.m_addr_current & 1))
         {
-            const uint16_t word = read_word(v.m_addr_current & ~1);
-            const int16_t delta = sample_7_to_8[(word >> 2) & 0x7F];
-            v.m_sample_next -= delta * (1 << v.m_exp);
+            // The loop data is the state after both samples of the word have been applied.
+            // When looping to the first sample, compensate for the SECOND sample (word >> 9).
+            const uint16_t word = read_word(v.m_addr_current);
+            const int16_t delta = sample_7_to_8[word >> 9];
+            v.m_sample_next = static_cast<int16_t>(v.m_sample_next - delta * (1 << v.m_exp));
         }
     }
     else
@@ -999,9 +1003,8 @@ void GT913Engine::update_sample(Voice& v)
 
         if (!(v.m_addr_current & 1))
         {
-            static const int8_t exp_diff[4] = { 0, 1, 2, -1 };
-            int new_exp = static_cast<int>(v.m_exp) + exp_diff[word & 3];
-            v.m_exp = static_cast<uint8_t>(std::clamp(new_exp, 0, 7));
+            // The exponent wraps around modulo 8 (exp_2_to_3 = { 0, 1, 2, 7 }), it is not clamped
+            v.m_exp = static_cast<uint8_t>((v.m_exp + exp_2_to_3[word & 3]) & 7);
             delta = sample_7_to_8[(word >> 2) & 0x7F];
         }
         else
@@ -1009,7 +1012,7 @@ void GT913Engine::update_sample(Voice& v)
             delta = sample_7_to_8[word >> 9];
         }
 
-        v.m_sample_next = static_cast<int32_t>(delta) * (1 << v.m_exp);
+        v.m_sample_next = static_cast<int16_t>(delta * (1 << v.m_exp));
     }
 
     v.m_addr_current++;
