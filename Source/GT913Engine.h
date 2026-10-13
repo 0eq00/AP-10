@@ -15,6 +15,9 @@
 #include <cmath>
 #include <algorithm>
 
+// Firmware envelope zone (defined in GT913EnvTables.h, included from GT913Engine.cpp)
+struct GT913EnvZone;
+
 class GT913Engine
 {
 public:
@@ -54,6 +57,13 @@ public:
         uint32_t m_decay_rate = 0x00001000;
         uint32_t m_release_rate = 0x00080000;
         uint32_t m_sustain_level = 0;
+
+        // Firmware-style multi-stage envelope (see GT913EnvTables.h)
+        const GT913EnvZone* m_env_zone = nullptr; // null = legacy decay/sustain/release envelope
+        int      m_env_index = 0;                 // index of the current stage word
+        uint32_t m_t1_v = 0;                      // first-stage target at this velocity
+        uint32_t m_t1_127 = 0;                    // first-stage target at velocity 127
+        uint32_t m_poll_timer = 0;                // ticks until the next firmware poll
     };
 
     Voice voices[MAX_VOICES];
@@ -107,6 +117,16 @@ public:
     // Pipe Organ:  -1.1 dB (0.881x)
     // Strings:     +4.5 dB (1.679x)
     float preset_volume_gain[5] = { 1.000f, 0.556f, 0.668f, 0.881f, 1.679f };
+
+    // Firmware envelope mode (default on). When on, every voice follows the multi-stage
+    // envelope logged from the MAME AP-10 firmware (GT913EnvTables.h) and the decay, sustain
+    // and release values in presets[] are ignored. Switching also swaps the preset volume gains.
+    static constexpr uint32_t ENV_POLL_PERIOD_TICKS   = 4689; // 40.96 ms at 114483 Hz
+    static constexpr uint32_t ENV_ADVANCE_MARGIN_TICKS = 0;    // 0: advance only when the target is reached (best match to the logs)
+    bool     use_firmware_envelope = true;
+    bool     poll_phase_random = false;   // false: fixed phase (half a period), true: random phase per note
+    uint32_t poll_phase_ticks = ENV_POLL_PERIOD_TICKS / 2; // used when poll_phase_random is false
+    void setUseFirmwareEnvelope(bool on);
     void setPresetVolumeGain(int presetIndex, float gainLinear);
     void setPresetVolumeDb(int presetIndex, float gainDb);
     float getPresetVolumeGain(int presetIndex) const;
@@ -137,9 +157,14 @@ public:
     static uint32_t calculatePitch(int midiNote, int baseNote, uint32_t basePitch);
 
     void update_envelope(Voice& v);
+    void update_envelope_firmware(Voice& v);
+    const GT913EnvZone* findEnvZone(int presetIndex, int midiNote) const;
     void update_sample(Voice& v);
     void mix_sample(Voice& v, int64_t& left, int64_t& right);
 
 private:
     uint16_t read_word(uint32_t addr) const;
+    uint32_t nextPollPhaseTicks();
+    float legacy_preset_volume_gain[5] = { 1.000f, 0.556f, 0.668f, 0.881f, 1.679f };
+    uint32_t m_phase_seed = 0x2545F491u;
 };

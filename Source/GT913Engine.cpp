@@ -8,6 +8,27 @@
 */
 
 #include "GT913Engine.h"
+#include "GT913EnvTables.h"
+
+namespace
+{
+    struct EnvZoneTable { const GT913EnvZone* zones; int count; };
+
+    // Index order matches the preset index: 0 Piano, 1 E.Piano, 2 Harpsichord, 3 Organ, 4 Strings
+    const EnvZoneTable kEnvZoneTables[5] = {
+        { piano_env_zones,   static_cast<int>(sizeof(piano_env_zones)   / sizeof(piano_env_zones[0]))   },
+        { ep_env_zones,      static_cast<int>(sizeof(ep_env_zones)      / sizeof(ep_env_zones[0]))      },
+        { harps_env_zones,   static_cast<int>(sizeof(harps_env_zones)   / sizeof(harps_env_zones[0]))   },
+        { organ_env_zones,   static_cast<int>(sizeof(organ_env_zones)   / sizeof(organ_env_zones[0]))   },
+        { strings_env_zones, static_cast<int>(sizeof(strings_env_zones) / sizeof(strings_env_zones[0])) }
+    };
+
+    // Preset volume gains that match the MAME AP-10 recordings when the firmware envelope is used.
+    // These come from fitting the logged envelopes to the recordings (about 1.0 to 1.1 for all tones).
+    // Re-measure with new recordings after building.
+//  const float kFirmwareEnvGain[5] = { 1.04f, 1.10f, 1.00f, 1.05f, 1.03f };
+    const float kFirmwareEnvGain[5] = { 1.04f, 1.09f, 1.04f, 1.05f, 1.04f };
+}
 
 const uint8_t GT913Engine::exp_2_to_3[4] = { 0, 1, 2, 7 };
 
@@ -484,11 +505,11 @@ const GT913Engine::PianoKeyParam GT913Engine::strings_key_map[88] = {
 };
 
 const GT913Engine::TonePreset GT913Engine::presets[5] = {
-    { "Grand Piano",  piano_key_map,       0x00001000, 0x00010000, 0          },
-    { "E. Piano",     epiano_key_map,      0x00001700, 0x0001C000, 0          },
-    { "Harpsichord",  harpsichord_key_map, 0x00001C00, 0x00023600, 0          },
-    { "Pipe Organ",   organ_key_map,       0x00000280, 0x00010000, 0x68000000 },
-    { "Strings",      strings_key_map,     0x00000240, 0x00007000, 0x4F800000 }
+    { "Grand Piano",  piano_key_map,       0x00001000, 0x00010000, 0 },
+    { "E. Piano",     epiano_key_map,      0x00000C00, 0x00070000, 0 },
+    { "Harpsichord",  harpsichord_key_map, 0x00002000, 0x00010000, 0 },
+    { "Pipe Organ",   organ_key_map,       0x00000200, 0x00010000, 0x70000000 },
+    { "Strings",      strings_key_map,     0x00000100, 0x00010000, 0x56000000 }
 };
 
 const uint32_t GT913Engine::velocity_volume_target[5][128] = {
@@ -604,18 +625,51 @@ uint32_t GT913Engine::getVelocityVolumeTarget(int presetIndex, int velocity)
 GT913Engine::GT913Engine()
 {
     // Calibrated relative preset loudness gains matching MAME AP-10 recordings:
-    preset_volume_gain[0] = 1.172f; // Piano
-    preset_volume_gain[1] = 0.793f; // E. Piano
-    preset_volume_gain[2] = 0.612f; // Harpsichord
-    preset_volume_gain[3] = 1.026f; // Pipe Organ
-    preset_volume_gain[4] = 2.169f; // Strings
+    preset_volume_gain[0] = 1.000f; // Piano (0.0 dB reference)
+    preset_volume_gain[1] = 0.556f; // E. Piano (-5.1 dB)
+    preset_volume_gain[2] = 0.668f; // Harpsichord (-3.5 dB)
+    preset_volume_gain[3] = 0.881f; // Pipe Organ (-1.1 dB)
+    preset_volume_gain[4] = 1.679f; // Strings (+4.5 dB)
 
     for (int i = 0; i < 5; ++i)
     {
         mod_presets[i] = presets[i];
+        legacy_preset_volume_gain[i] = preset_volume_gain[i];
     }
     setTone(0);
     reset();
+    setUseFirmwareEnvelope(use_firmware_envelope);
+}
+
+void GT913Engine::setUseFirmwareEnvelope(bool on)
+{
+    use_firmware_envelope = on;
+    for (int i = 0; i < 5; ++i)
+        preset_volume_gain[i] = on ? kFirmwareEnvGain[i] : legacy_preset_volume_gain[i];
+}
+
+const GT913EnvZone* GT913Engine::findEnvZone(int presetIndex, int midiNote) const
+{
+    if (presetIndex < 0 || presetIndex >= 5) return nullptr;
+    const auto& table = kEnvZoneTables[presetIndex];
+    for (int i = 0; i < table.count; ++i)
+    {
+        if (midiNote >= table.zones[i].first_key && midiNote <= table.zones[i].last_key)
+            return &table.zones[i];
+    }
+    return nullptr;
+}
+
+uint32_t GT913Engine::nextPollPhaseTicks()
+{
+    if (!poll_phase_random)
+        return std::max<uint32_t>(1, poll_phase_ticks);
+
+    // xorshift32: the firmware poll timer runs freely, so the phase differs from note to note
+    m_phase_seed ^= m_phase_seed << 13;
+    m_phase_seed ^= m_phase_seed >> 17;
+    m_phase_seed ^= m_phase_seed << 5;
+    return 1 + (m_phase_seed % ENV_POLL_PERIOD_TICKS);
 }
 
 GT913Engine::~GT913Engine()
@@ -855,6 +909,25 @@ void GT913Engine::noteOn(int midiNote, int velocity)
 
         v.m_balance[0]     = 7;
         v.m_balance[1]     = 7;
+
+        // Firmware envelope: the stage words are logged at velocity 127 and scaled by the velocity
+        v.m_env_zone = nullptr;
+        if (use_firmware_envelope)
+        {
+            const GT913EnvZone* zone = findEnvZone(current_preset, clampedNote);
+            if (zone != nullptr && zone->num_words > 0)
+            {
+                v.m_env_zone      = zone;
+                v.m_env_index     = 0;
+                v.m_t1_v          = targetVolume;
+                v.m_t1_127        = getVelocityVolumeTarget(current_preset, 127);
+                v.m_volume_target = targetVolume;
+                v.m_volume_rate   = gt913_env_rate(zone->words[0]);
+                v.m_release_rate  = gt913_env_rate(zone->release);
+                v.m_poll_timer    = nextPollPhaseTicks();
+                v.m_env_stage     = 1;
+            }
+        }
     }
 }
 
@@ -897,9 +970,66 @@ void GT913Engine::setSoftPedal(bool down)
     soft_pedal = down;
 }
 
+void GT913Engine::update_envelope_firmware(Voice& v)
+{
+    // 1. The volume moves toward the target by one rate step per tick, in either direction
+    if (v.m_volume_current < v.m_volume_target)
+    {
+        const uint64_t next = static_cast<uint64_t>(v.m_volume_current) + v.m_volume_rate;
+        v.m_volume_current = static_cast<uint32_t>(std::min<uint64_t>(next, v.m_volume_target));
+    }
+    else if (v.m_volume_current > v.m_volume_target)
+    {
+        if (v.m_volume_current - v.m_volume_target > v.m_volume_rate)
+            v.m_volume_current -= v.m_volume_rate;
+        else
+            v.m_volume_current = v.m_volume_target;
+    }
+
+    // 2. The firmware polls the voice about every 40.96 ms. When the volume has reached the
+    //    target (or is about to), it writes the next stage word. Key-off (stage 4) stops the polling.
+    if (v.m_env_stage == 1 && v.m_env_zone != nullptr)
+    {
+        if (v.m_poll_timer > 0) --v.m_poll_timer;
+        if (v.m_poll_timer == 0)
+        {
+            v.m_poll_timer = ENV_POLL_PERIOD_TICKS;
+
+            const int next = v.m_env_index + 1;
+            if (next < v.m_env_zone->num_words)
+            {
+                const uint64_t diff = (v.m_volume_current > v.m_volume_target)
+                                          ? (v.m_volume_current - v.m_volume_target)
+                                          : (v.m_volume_target - v.m_volume_current);
+                if (diff <= static_cast<uint64_t>(v.m_volume_rate) * ENV_ADVANCE_MARGIN_TICKS)
+                {
+                    const uint16_t word = v.m_env_zone->words[next];
+                    v.m_env_index     = next;
+                    v.m_volume_target = gt913_env_target_scaled(word, v.m_t1_v, v.m_t1_127);
+                    v.m_volume_rate   = gt913_env_rate(word);
+                }
+            }
+        }
+    }
+
+    // 3. A stage that ends at zero (final decay or release) ends the voice
+    if (v.m_volume_current <= 50 && v.m_volume_target == 0)
+    {
+        v.m_volume_current = 0;
+        v.m_enable = false;
+        v.m_env_stage = 0;
+    }
+}
+
 void GT913Engine::update_envelope(Voice& v)
 {
     if (!v.m_enable) return;
+
+    if (v.m_env_zone != nullptr)
+    {
+        update_envelope_firmware(v);
+        return;
+    }
 
     switch (v.m_env_stage)
     {
