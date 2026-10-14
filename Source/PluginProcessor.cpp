@@ -285,6 +285,7 @@ void AP10AudioProcessor::getStateInformation (juce::MemoryBlock& destData)
     juce::XmlElement xml ("AP10PLUGINSTATE");
     xml.setAttribute ("currentPreset", engine.current_preset);
     xml.setAttribute ("release_multiplier", static_cast<double>(engine.getReleaseMultiplier()));
+    xml.setAttribute ("piano_high_release_multiplier", static_cast<double>(engine.getPianoHighReleaseMultiplier()));
 
     copyXmlToBinary (xml, destData);
 }
@@ -302,6 +303,10 @@ void AP10AudioProcessor::setStateInformation (const void* data, int sizeInBytes)
         double mult = xmlState->getDoubleAttribute ("release_multiplier",
                           xmlState->getDoubleAttribute ("releaseMultiplier", 1.0));
         engine.setReleaseMultiplier (static_cast<float>(mult));
+
+        double highMult = xmlState->getDoubleAttribute ("piano_high_release_multiplier",
+                              xmlState->getDoubleAttribute ("pianoHighReleaseMultiplier", 1.0));
+        engine.setPianoHighReleaseMultiplier (static_cast<float>(highMult));
     }
 }
 

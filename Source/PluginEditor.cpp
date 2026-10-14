@@ -81,6 +81,32 @@ AP10AudioProcessorEditor::AP10AudioProcessorEditor (AP10AudioProcessor& p)
     releaseLabel.setFont(juce::FontOptions(10.0f));
     releaseLabel.setJustificationType(juce::Justification::centred);
     releaseLabel.setColour(juce::Label::textColourId, juce::Colour(0xffa1a1aa));
+    // Special Piano 92+ Release Rate Multiplier Knob (placed directly beneath Strings button)
+    addAndMakeVisible(pianoHighReleaseKnob);
+    pianoHighReleaseKnob.setSliderStyle(juce::Slider::RotaryVerticalDrag);
+    pianoHighReleaseKnob.setTextBoxStyle(juce::Slider::TextBoxBelow, false, 54, 16);
+    pianoHighReleaseKnob.setRange(0.1, 5.0, 0.05);
+    pianoHighReleaseKnob.setValue(audioProcessor.getEngine().getPianoHighReleaseMultiplier(), juce::dontSendNotification);
+    pianoHighReleaseKnob.setTextValueSuffix("x");
+    pianoHighReleaseKnob.setDoubleClickReturnValue(true, 1.0);
+    pianoHighReleaseKnob.setColour(juce::Slider::rotarySliderFillColourId, juce::Colour(0xff38bdf8));
+    pianoHighReleaseKnob.setColour(juce::Slider::rotarySliderOutlineColourId, juce::Colour(0xff27272a));
+    pianoHighReleaseKnob.setColour(juce::Slider::thumbColourId, juce::Colour(0xff38bdf8));
+    pianoHighReleaseKnob.setColour(juce::Slider::textBoxTextColourId, juce::Colour(0xffe4e4e7));
+    pianoHighReleaseKnob.setColour(juce::Slider::textBoxBackgroundColourId, juce::Colour(0xff18181b));
+    pianoHighReleaseKnob.setColour(juce::Slider::textBoxOutlineColourId, juce::Colour(0xff27272a));
+    pianoHighReleaseKnob.onValueChange = [this]()
+    {
+        float mult = static_cast<float>(pianoHighReleaseKnob.getValue());
+        audioProcessor.getEngine().setPianoHighReleaseMultiplier(mult);
+    };
+
+    addAndMakeVisible(pianoHighReleaseLabel);
+    pianoHighReleaseLabel.setText("Piano 92+ Rel", juce::dontSendNotification);
+    pianoHighReleaseLabel.setFont(juce::FontOptions(10.0f));
+    pianoHighReleaseLabel.setJustificationType(juce::Justification::centred);
+    pianoHighReleaseLabel.setColour(juce::Label::textColourId, juce::Colour(0xff38bdf8));
+
 
     // 88-Key Interactive Piano Keyboard (playable with mouse, velocity varies with click Y position)
     addAndMakeVisible(keyboardComponent);
@@ -172,6 +198,15 @@ void AP10AudioProcessorEditor::timerCallback()
         }
     }
 
+    if (!pianoHighReleaseKnob.isMouseButtonDown())
+    {
+        float currentHighMult = audioProcessor.getEngine().getPianoHighReleaseMultiplier();
+        if (std::abs(pianoHighReleaseKnob.getValue() - currentHighMult) > 0.01)
+        {
+            pianoHighReleaseKnob.setValue(currentHighMult, juce::dontSendNotification);
+        }
+    }
+
     repaint();
 }
 
@@ -240,12 +275,23 @@ void AP10AudioProcessorEditor::resized()
         toneButtons[i].setBounds(btnStartX + i * (btnW + btnGap), 11, btnW, btnH);
     }
 
-    // Release Rate Knob positioned directly beneath the 5th (Strings) button
+    // Release Knobs:
+    // pianoHighReleaseKnob is placed at the current releaseKnob position (directly under Strings button)
+    // releaseKnob is shifted to the left
     int stringsBtnX = btnStartX + 4 * (btnW + btnGap);
     int knobW = 56;
-    int knobX = stringsBtnX + (btnW - knobW) / 2;
-    releaseLabel.setBounds(stringsBtnX, 42, btnW, 14);
-    releaseKnob.setBounds(knobX, 56, knobW, 58);
+    int knobH = 58;
+    int gapKnob = 8;
+
+    // Special Piano 92+ knob directly beneath Strings:
+    int specialKnobX = stringsBtnX + (btnW - knobW) / 2;
+    pianoHighReleaseLabel.setBounds(specialKnobX - 4, 42, knobW + 8, 14);
+    pianoHighReleaseKnob.setBounds(specialKnobX, 56, knobW, knobH);
+
+    // General releaseKnob shifted to the left:
+    int generalKnobX = specialKnobX - knobW - gapKnob;
+    releaseLabel.setBounds(generalKnobX - 4, 42, knobW + 8, 14);
+    releaseKnob.setBounds(generalKnobX, 56, knobW, knobH);
 
     // 1. voiceCountLabel placed right next to "GT913 24-VOICE POLYPHONY MATRIX"
     voiceCountLabel.setBounds(240, 126, 120, 18);

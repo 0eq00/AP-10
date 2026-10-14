@@ -145,6 +145,10 @@ public:
     float    release_multiplier = 1.0f; // Multiplies firmware envelope release rate
     void     setReleaseMultiplier(float mult);
     float    getReleaseMultiplier() const { return release_multiplier; }
+    float    piano_high_release_multiplier = 1.0f; // Multiplier for Grand Piano key >= 92 (G#6..C8)
+    void     setPianoHighReleaseMultiplier(float mult);
+    float    getPianoHighReleaseMultiplier() const { return piano_high_release_multiplier; }
+    float    getEffectiveReleaseMultiplier(int presetIndex, int midiNote) const;
     void setEnvelopeParams(int presetIndex, uint32_t decay, uint32_t release, uint32_t sustain);
 
     void noteOn(int midiNote, int velocity);

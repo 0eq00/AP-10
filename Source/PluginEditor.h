@@ -34,6 +34,9 @@ private:
     // Release Rate Multiplier Rotary Knob & Direct Value Editor (positioned beneath Strings button)
     juce::Slider releaseKnob;
     juce::Label  releaseLabel;
+    // Special Release Rate Knob for Grand Piano >= 92 (placed at Strings position)
+    juce::Slider pianoHighReleaseKnob;
+    juce::Label  pianoHighReleaseLabel;
 
     // 88-Key Interactive Piano Keyboard (placed above the console)
     juce::MidiKeyboardComponent keyboardComponent;

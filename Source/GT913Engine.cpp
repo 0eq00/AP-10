@@ -671,12 +671,40 @@ const GT913Engine::PianoKeyParam* GT913Engine::getKeyMapForCurrentPreset() const
     return getCurrentPreset().key_map;
 }
 
+float GT913Engine::getEffectiveReleaseMultiplier(int presetIndex, int midiNote) const
+{
+    // Apply special multiplier for Grand Piano (preset 0) at key 92 (G#6) and above
+    if (presetIndex == 0 && midiNote >= 92)
+        return piano_high_release_multiplier;
+    return release_multiplier;
+}
+
+void GT913Engine::setPianoHighReleaseMultiplier(float mult)
+{
+    piano_high_release_multiplier = std::clamp(mult, 0.05f, 10.0f);
+    for (int i = 0; i < MAX_VOICES; ++i)
+    {
+        if (voices[i].m_enable && voices[i].m_preset_id == 0 && voices[i].m_midi_note >= 92)
+        {
+            if (voices[i].m_env_zone != nullptr)
+            {
+                uint32_t baseRate = gt913_env_rate(voices[i].m_env_zone->release);
+                voices[i].m_release_rate = std::max<uint32_t>(1, static_cast<uint32_t>(baseRate * piano_high_release_multiplier));
+            }
+            if (voices[i].m_env_stage == 4)
+            {
+                voices[i].m_volume_rate = voices[i].m_release_rate;
+            }
+        }
+    }
+}
+
 void GT913Engine::setReleaseMultiplier(float mult)
 {
     release_multiplier = std::clamp(mult, 0.05f, 10.0f);
     for (int i = 0; i < MAX_VOICES; ++i)
     {
-        if (voices[i].m_enable)
+        if (voices[i].m_enable && !(voices[i].m_preset_id == 0 && voices[i].m_midi_note >= 92))
         {
             if (voices[i].m_env_zone != nullptr)
             {
@@ -885,7 +913,8 @@ void GT913Engine::noteOn(int midiNote, int velocity)
             v.m_t1_127        = getVelocityVolumeTarget(current_preset, 127);
             v.m_volume_target = targetVolume;
             v.m_volume_rate   = gt913_env_rate(zone->words[0]);
-            v.m_release_rate  = std::max<uint32_t>(1, static_cast<uint32_t>(gt913_env_rate(zone->release) * release_multiplier));
+            const float effMult = getEffectiveReleaseMultiplier(current_preset, clampedNote);
+            v.m_release_rate  = std::max<uint32_t>(1, static_cast<uint32_t>(gt913_env_rate(zone->release) * effMult));
             v.m_poll_timer    = nextPollPhaseTicks();
             v.m_env_stage     = 1;
         }
@@ -904,7 +933,10 @@ void GT913Engine::noteOff(int midiNote)
                 voices[i].m_env_stage     = 4;
                 voices[i].m_volume_target = 0;
                 if (voices[i].m_env_zone != nullptr)
-                    voices[i].m_release_rate = std::max<uint32_t>(1, static_cast<uint32_t>(gt913_env_rate(voices[i].m_env_zone->release) * release_multiplier));
+                {
+                    const float effMult = getEffectiveReleaseMultiplier(voices[i].m_preset_id, voices[i].m_midi_note);
+                    voices[i].m_release_rate = std::max<uint32_t>(1, static_cast<uint32_t>(gt913_env_rate(voices[i].m_env_zone->release) * effMult));
+                }
                 voices[i].m_volume_rate   = voices[i].m_release_rate;
             }
         }
@@ -923,7 +955,10 @@ void GT913Engine::setDamperPedal(bool down)
                 voices[i].m_env_stage     = 4;
                 voices[i].m_volume_target = 0;
                 if (voices[i].m_env_zone != nullptr)
-                    voices[i].m_release_rate = std::max<uint32_t>(1, static_cast<uint32_t>(gt913_env_rate(voices[i].m_env_zone->release) * release_multiplier));
+                {
+                    const float effMult = getEffectiveReleaseMultiplier(voices[i].m_preset_id, voices[i].m_midi_note);
+                    voices[i].m_release_rate = std::max<uint32_t>(1, static_cast<uint32_t>(gt913_env_rate(voices[i].m_env_zone->release) * effMult));
+                }
                 voices[i].m_volume_rate   = voices[i].m_release_rate;
             }
         }
