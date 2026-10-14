@@ -31,6 +31,10 @@ private:
     // 5 Tone Preset Toggle Buttons (replacing ComboBox)
     juce::TextButton toneButtons[5];
 
+    // Release Rate Multiplier Rotary Knob & Direct Value Editor (positioned beneath Strings button)
+    juce::Slider releaseKnob;
+    juce::Label  releaseLabel;
+
     // 88-Key Interactive Piano Keyboard (placed above the console)
     juce::MidiKeyboardComponent keyboardComponent;
 

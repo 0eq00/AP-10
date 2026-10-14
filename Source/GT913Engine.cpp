@@ -671,6 +671,26 @@ const GT913Engine::PianoKeyParam* GT913Engine::getKeyMapForCurrentPreset() const
     return getCurrentPreset().key_map;
 }
 
+void GT913Engine::setReleaseMultiplier(float mult)
+{
+    release_multiplier = std::clamp(mult, 0.05f, 10.0f);
+    for (int i = 0; i < MAX_VOICES; ++i)
+    {
+        if (voices[i].m_enable)
+        {
+            if (voices[i].m_env_zone != nullptr)
+            {
+                uint32_t baseRate = gt913_env_rate(voices[i].m_env_zone->release);
+                voices[i].m_release_rate = std::max<uint32_t>(1, static_cast<uint32_t>(baseRate * release_multiplier));
+            }
+            if (voices[i].m_env_stage == 4)
+            {
+                voices[i].m_volume_rate = voices[i].m_release_rate;
+            }
+        }
+    }
+}
+
 void GT913Engine::setEnvelopeParams(int presetIndex, uint32_t decay, uint32_t release, uint32_t sustain)
 {
     if (presetIndex >= 0 && presetIndex < 5)
@@ -865,7 +885,7 @@ void GT913Engine::noteOn(int midiNote, int velocity)
             v.m_t1_127        = getVelocityVolumeTarget(current_preset, 127);
             v.m_volume_target = targetVolume;
             v.m_volume_rate   = gt913_env_rate(zone->words[0]);
-            v.m_release_rate  = gt913_env_rate(zone->release);
+            v.m_release_rate  = std::max<uint32_t>(1, static_cast<uint32_t>(gt913_env_rate(zone->release) * release_multiplier));
             v.m_poll_timer    = nextPollPhaseTicks();
             v.m_env_stage     = 1;
         }
@@ -883,6 +903,8 @@ void GT913Engine::noteOff(int midiNote)
             {
                 voices[i].m_env_stage     = 4;
                 voices[i].m_volume_target = 0;
+                if (voices[i].m_env_zone != nullptr)
+                    voices[i].m_release_rate = std::max<uint32_t>(1, static_cast<uint32_t>(gt913_env_rate(voices[i].m_env_zone->release) * release_multiplier));
                 voices[i].m_volume_rate   = voices[i].m_release_rate;
             }
         }
@@ -900,6 +922,8 @@ void GT913Engine::setDamperPedal(bool down)
             {
                 voices[i].m_env_stage     = 4;
                 voices[i].m_volume_target = 0;
+                if (voices[i].m_env_zone != nullptr)
+                    voices[i].m_release_rate = std::max<uint32_t>(1, static_cast<uint32_t>(gt913_env_rate(voices[i].m_env_zone->release) * release_multiplier));
                 voices[i].m_volume_rate   = voices[i].m_release_rate;
             }
         }

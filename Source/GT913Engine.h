@@ -142,6 +142,9 @@ public:
     void setTone(int index);
     const TonePreset& getCurrentPreset() const;
     const PianoKeyParam* getKeyMapForCurrentPreset() const;
+    float    release_multiplier = 1.0f; // Multiplies firmware envelope release rate
+    void     setReleaseMultiplier(float mult);
+    float    getReleaseMultiplier() const { return release_multiplier; }
     void setEnvelopeParams(int presetIndex, uint32_t decay, uint32_t release, uint32_t sustain);
 
     void noteOn(int midiNote, int velocity);

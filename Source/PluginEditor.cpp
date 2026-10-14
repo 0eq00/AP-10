@@ -56,6 +56,32 @@ AP10AudioProcessorEditor::AP10AudioProcessorEditor (AP10AudioProcessor& p)
     if (initTone >= 0 && initTone < 5)
         toneButtons[initTone].setToggleState(true, juce::dontSendNotification);
 
+    // Release Rate Multiplier Rotary Knob (positioned directly beneath Strings button)
+    addAndMakeVisible(releaseKnob);
+    releaseKnob.setSliderStyle(juce::Slider::RotaryVerticalDrag);
+    releaseKnob.setTextBoxStyle(juce::Slider::TextBoxBelow, false, 54, 16);
+    releaseKnob.setRange(0.1, 5.0, 0.05);
+    releaseKnob.setValue(audioProcessor.getEngine().getReleaseMultiplier(), juce::dontSendNotification);
+    releaseKnob.setTextValueSuffix("x");
+    releaseKnob.setDoubleClickReturnValue(true, 1.0);
+    releaseKnob.setColour(juce::Slider::rotarySliderFillColourId, juce::Colour(0xfffbbf24));
+    releaseKnob.setColour(juce::Slider::rotarySliderOutlineColourId, juce::Colour(0xff27272a));
+    releaseKnob.setColour(juce::Slider::thumbColourId, juce::Colour(0xff4ade80));
+    releaseKnob.setColour(juce::Slider::textBoxTextColourId, juce::Colour(0xffe4e4e7));
+    releaseKnob.setColour(juce::Slider::textBoxBackgroundColourId, juce::Colour(0xff18181b));
+    releaseKnob.setColour(juce::Slider::textBoxOutlineColourId, juce::Colour(0xff27272a));
+    releaseKnob.onValueChange = [this]()
+    {
+        float mult = static_cast<float>(releaseKnob.getValue());
+        audioProcessor.getEngine().setReleaseMultiplier(mult);
+    };
+
+    addAndMakeVisible(releaseLabel);
+    releaseLabel.setText("Release Rate", juce::dontSendNotification);
+    releaseLabel.setFont(juce::FontOptions(10.0f));
+    releaseLabel.setJustificationType(juce::Justification::centred);
+    releaseLabel.setColour(juce::Label::textColourId, juce::Colour(0xffa1a1aa));
+
     // 88-Key Interactive Piano Keyboard (playable with mouse, velocity varies with click Y position)
     addAndMakeVisible(keyboardComponent);
     keyboardComponent.setAvailableRange(21, 108); // 88 keys (MIDI 21 A0 to 108 C8)
@@ -95,18 +121,18 @@ AP10AudioProcessorEditor::AP10AudioProcessorEditor (AP10AudioProcessor& p)
         {
             toggleConsoleButton.setButtonText("Log " + juce::String::fromUTF8("▲"));
             consoleOutput.setVisible(true);
-            setSize(680, 348);
+            setSize(680, 380);
         }
         else
         {
             toggleConsoleButton.setButtonText("Log " + juce::String::fromUTF8("▼"));
             consoleOutput.setVisible(false);
-            setSize(680, 262);
+            setSize(680, 296);
         }
     };
 
     // Plugin window size with collapsed console by default (262px)
-    setSize(680, 262);
+    setSize(680, 296);
     startTimerHz(25);
 }
 
@@ -136,6 +162,16 @@ void AP10AudioProcessorEditor::timerCallback()
         }
     }
 
+    // Sync release knob if changed externally (e.g. from DAW preset / state restore)
+    if (!releaseKnob.isMouseButtonDown())
+    {
+        float currentMult = audioProcessor.getEngine().getReleaseMultiplier();
+        if (std::abs(releaseKnob.getValue() - currentMult) > 0.01)
+        {
+            releaseKnob.setValue(currentMult, juce::dontSendNotification);
+        }
+    }
+
     repaint();
 }
 
@@ -145,21 +181,21 @@ void AP10AudioProcessorEditor::paint (juce::Graphics& g)
 
     // Top header bar background & border
     g.setColour(juce::Colour(0xff27272a));
-    g.fillRect(4, 4, getWidth()-8, 83);
+    g.fillRect(4, 4, getWidth()-8, 118);
     g.setColour(juce::Colours::gold);
-    g.drawRect(4, 4, getWidth()-8, 83, 1);
+    g.drawRect(4, 4, getWidth()-8, 118, 1);
 
     // 4 & 5. Dividing line between ENVELOPE PARAMS and POLYPHONY MATRIX in console border grey
     g.setColour(juce::Colour(0xff27272a));
-    g.drawHorizontalLine(85, 0.0f, static_cast<float>(getWidth()));
+    g.drawHorizontalLine(120, 0.0f, static_cast<float>(getWidth()));
 
     // 1. Section title for 24-Voice Polyphony Matrix
     g.setColour(juce::Colours::lightgrey);
     g.setFont(juce::FontOptions(11.0f));
-    g.drawText("GT913 24-VOICE POLYPHONY MATRIX", 15, 92, 220, 18, juce::Justification::left);
+    g.drawText("GT913 24-VOICE POLYPHONY MATRIX", 15, 126, 220, 18, juce::Justification::left);
 
     int startX = 15;
-    int startY = 114;
+    int startY = 146;
     int ledW = 20;
     int ledH = 14;
     int gap = 4;
@@ -204,11 +240,18 @@ void AP10AudioProcessorEditor::resized()
         toneButtons[i].setBounds(btnStartX + i * (btnW + btnGap), 11, btnW, btnH);
     }
 
+    // Release Rate Knob positioned directly beneath the 5th (Strings) button
+    int stringsBtnX = btnStartX + 4 * (btnW + btnGap);
+    int knobW = 56;
+    int knobX = stringsBtnX + (btnW - knobW) / 2;
+    releaseLabel.setBounds(stringsBtnX, 42, btnW, 14);
+    releaseKnob.setBounds(knobX, 56, knobW, 58);
+
     // 1. voiceCountLabel placed right next to "GT913 24-VOICE POLYPHONY MATRIX"
-    voiceCountLabel.setBounds(240, 92, 120, 18);
+    voiceCountLabel.setBounds(240, 126, 120, 18);
 
     // 88-Key Interactive Piano Keyboard (placed directly above the console, with 10px gap below polyphony LEDs)
-    keyboardComponent.setBounds(15, 160, getWidth() - 30, 64);
+    keyboardComponent.setBounds(15, 192, getWidth() - 30, 64);
     keyboardComponent.setKeyWidth(static_cast<float>(getWidth() - 30) / 52.0f);
 
     // 7. Collapsible console output & bottom-right toggle button
@@ -218,12 +261,12 @@ void AP10AudioProcessorEditor::resized()
     if (isConsoleExpanded)
     {
         // 6. Console Output (shortened to ~5 lines, 80px height)
-        consoleOutput.setBounds(15, 232, getWidth() - 30, 80);
-        toggleConsoleButton.setBounds(getWidth() - 15 - toggleW, 317, toggleW, toggleH);
+        consoleOutput.setBounds(15, 264, getWidth() - 30, 80);
+        toggleConsoleButton.setBounds(getWidth() - 15 - toggleW, 349, toggleW, toggleH);
     }
     else
     {
         consoleOutput.setBounds(0, 0, 0, 0);
-        toggleConsoleButton.setBounds(getWidth() - 15 - toggleW, 231, toggleW, toggleH);
+        toggleConsoleButton.setBounds(getWidth() - 15 - toggleW, 263, toggleW, toggleH);
     }
 }
