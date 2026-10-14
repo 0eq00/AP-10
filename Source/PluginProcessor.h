@@ -50,6 +50,8 @@ public:
 
     GT913Engine& getEngine() { return engine; }
     int getActiveVoiceCount() const;
+    int getMaxVoices() const { return engine.getMaxVoices(); }
+    void setMaxVoices(int count) { engine.setMaxVoices(count); }
 
     juce::MidiKeyboardState& getKeyboardState() { return keyboardState; }
 

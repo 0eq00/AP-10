@@ -27,6 +27,8 @@ private:
 
     juce::Label statusLabel;
     juce::Label voiceCountLabel;
+    // Polyphony Mode Switch Button (24-Voice default vs 88-Voice)
+    juce::TextButton voiceModeButton;
 
     // 5 Tone Preset Toggle Buttons (replacing ComboBox)
     juce::TextButton toneButtons[5];

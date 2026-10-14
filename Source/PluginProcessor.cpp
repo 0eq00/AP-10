@@ -104,7 +104,8 @@ juce::StringArray AP10AudioProcessor::exchangeLogBuffer()
 int AP10AudioProcessor::getActiveVoiceCount() const
 {
     int count = 0;
-    for (int i = 0; i < GT913Engine::MAX_VOICES; ++i)
+    const int limit = engine.getMaxVoices();
+    for (int i = 0; i < limit; ++i)
     {
         if (engine.voices[i].m_enable)
             count++;
@@ -220,7 +221,8 @@ void AP10AudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::M
             int64_t stepLeft = 0;
             int64_t stepRight = 0;
 
-            for (int v = 0; v < GT913Engine::MAX_VOICES; ++v)
+            const int limit = engine.getMaxVoices();
+            for (int v = 0; v < limit; ++v)
             {
                 auto& voice = engine.voices[v];
                 if (voice.m_enable)
@@ -260,6 +262,7 @@ void AP10AudioProcessor::getStateInformation (juce::MemoryBlock& destData)
 {
     juce::XmlElement xml ("AP10PLUGINSTATE");
     xml.setAttribute ("currentPreset", engine.current_preset);
+    xml.setAttribute ("max_voices", engine.getMaxVoices());
     xml.setAttribute ("release_multiplier", static_cast<double>(engine.getReleaseMultiplier()));
     xml.setAttribute ("piano_high_release_multiplier", static_cast<double>(engine.getPianoHighReleaseMultiplier()));
 
@@ -283,6 +286,9 @@ void AP10AudioProcessor::setStateInformation (const void* data, int sizeInBytes)
         double highMult = xmlState->getDoubleAttribute ("piano_high_release_multiplier",
                               xmlState->getDoubleAttribute ("pianoHighReleaseMultiplier", 1.0));
         engine.setPianoHighReleaseMultiplier (static_cast<float>(highMult));
+
+        int maxV = xmlState->getIntAttribute ("max_voices", 24);
+        engine.setMaxVoices (maxV);
     }
 }
 

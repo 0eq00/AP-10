@@ -21,7 +21,13 @@ struct GT913EnvZone;
 class GT913Engine
 {
 public:
-    static constexpr int MAX_VOICES = 24;
+    static constexpr int MAX_ALLOCATED_VOICES = 88;
+    static constexpr int DEFAULT_VOICES = 24;
+    static constexpr int MAX_VOICES = MAX_ALLOCATED_VOICES;
+
+    int      max_voices = DEFAULT_VOICES;
+    int      getMaxVoices() const { return max_voices; }
+    void     setMaxVoices(int count);
     static constexpr double HARDWARE_SAMPLE_RATE = 114483.0; // ~114.5 kHz internal rate
 
     // Look-up tables from gt913.cpp

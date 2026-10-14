@@ -20,9 +20,23 @@ AP10AudioProcessorEditor::AP10AudioProcessorEditor (AP10AudioProcessor& p)
 
     // 1. voiceCountLabel: Font size matched to 11.0f (placed next to matrix title)
     addAndMakeVisible(voiceCountLabel);
-    voiceCountLabel.setText("Voices: 0 / 24", juce::dontSendNotification);
+    voiceCountLabel.setText("Voices: 0 / " + juce::String(audioProcessor.getMaxVoices()), juce::dontSendNotification);
     voiceCountLabel.setColour(juce::Label::textColourId, juce::Colour(0xff4ade80));
     voiceCountLabel.setFont(juce::FontOptions(11.0f));
+
+    // Polyphony Mode Toggle Button (24-Voice default vs 88-Voice)
+    addAndMakeVisible(voiceModeButton);
+    voiceModeButton.setButtonText(audioProcessor.getMaxVoices() == 88 ? "88 Voices" : "24 Voices");
+    voiceModeButton.setColour(juce::TextButton::buttonColourId, juce::Colour(0xff18181b));
+    voiceModeButton.setColour(juce::TextButton::textColourOffId, juce::Colour(0xff38bdf8));
+    voiceModeButton.onClick = [this]()
+    {
+        int newLimit = (audioProcessor.getMaxVoices() == 24) ? 88 : 24;
+        audioProcessor.setMaxVoices(newLimit);
+        voiceModeButton.setButtonText(newLimit == 88 ? "88 Voices" : "24 Voices");
+        voiceCountLabel.setText("Voices: " + juce::String(audioProcessor.getActiveVoiceCount()) + " / " + juce::String(newLimit), juce::dontSendNotification);
+        repaint();
+    };
 
     // 2. 5 Tone Preset Toggle Buttons (replacing ComboBox)
     const juce::String buttonNames[5] = { "Piano", "E. Piano", "Harpsichord", "Pipe Organ", "Strings" };
@@ -175,7 +189,11 @@ void AP10AudioProcessorEditor::timerCallback()
     }
 
     int active = audioProcessor.getActiveVoiceCount();
-    voiceCountLabel.setText("Voices: " + juce::String(active) + " / 24", juce::dontSendNotification);
+    int maxV = audioProcessor.getMaxVoices();
+    voiceCountLabel.setText("Voices: " + juce::String(active) + " / " + juce::String(maxV), juce::dontSendNotification);
+    juce::String expectedMode = (maxV == 88) ? "88 Voices" : "24 Voices";
+    if (voiceModeButton.getButtonText() != expectedMode)
+        voiceModeButton.setButtonText(expectedMode);
 
     // Sync toggle button states if preset changed externally
     int currentToneId = audioProcessor.getEngine().current_preset;
@@ -223,39 +241,73 @@ void AP10AudioProcessorEditor::paint (juce::Graphics& g)
     g.setColour(juce::Colour(0xff27272a));
     g.drawHorizontalLine(120, 0.0f, static_cast<float>(getWidth()));
 
-    // 1. Section title for 24-Voice Polyphony Matrix
+    // 1. Section title for Polyphony Matrix
+    auto& engine = audioProcessor.getEngine();
+    const int maxV = engine.getMaxVoices();
     g.setColour(juce::Colours::lightgrey);
     g.setFont(juce::FontOptions(11.0f));
-    g.drawText("GT913 24-VOICE POLYPHONY MATRIX", 15, 126, 220, 18, juce::Justification::left);
+    g.drawText("GT913 " + juce::String(maxV) + "-VOICE POLYPHONY MATRIX", 15, 126, 220, 18, juce::Justification::left);
 
     int startX = 15;
     int startY = 146;
-    int ledW = 20;
-    int ledH = 14;
-    int gap = 4;
 
-    auto& engine = audioProcessor.getEngine();
-    for (int i = 0; i < 24; ++i)
+    if (maxV == 88)
     {
-        int x = startX + (i % 12) * (ledW + gap);
-        int y = startY + (i / 12) * (ledH + gap + 4);
+        // 88-Voice mode: 4 rows of 22 LEDs
+        int ledW = 24;
+        int ledH = 8;
+        int gapX = 4;
+        int gapY = 2;
 
-        bool active = engine.voices[i].m_enable;
-        if (active)
+        for (int i = 0; i < 88; ++i)
         {
-            g.setColour(juce::Colour(0xff4ade80));
-            g.fillRoundedRectangle((float)x, (float)y, (float)ledW, (float)ledH, 3.0f);
-            g.setColour(juce::Colours::black);
-            g.setFont(juce::FontOptions(9.0f, juce::Font::bold));
-            g.drawText(juce::String(engine.voices[i].m_midi_note), x, y, ledW, ledH, juce::Justification::centred);
+            int col = i % 22;
+            int row = i / 22;
+            int x = startX + col * (ledW + gapX);
+            int y = startY + row * (ledH + gapY);
+
+            bool active = engine.voices[i].m_enable;
+            if (active)
+            {
+                g.setColour(juce::Colour(0xff38bdf8));
+                g.fillRoundedRectangle((float)x, (float)y, (float)ledW, (float)ledH, 2.0f);
+            }
+            else
+            {
+                g.setColour(juce::Colour(0xff27272a));
+                g.drawRoundedRectangle((float)x, (float)y, (float)ledW, (float)ledH, 2.0f, 1.0f);
+            }
         }
-        else
+    }
+    else
+    {
+        // 24-Voice mode: 2 rows of 12 LEDs
+        int ledW = 20;
+        int ledH = 14;
+        int gap = 4;
+
+        for (int i = 0; i < 24; ++i)
         {
-            g.setColour(juce::Colour(0xff27272a));
-            g.drawRoundedRectangle((float)x, (float)y, (float)ledW, (float)ledH, 3.0f, 1.0f);
-            g.setColour(juce::Colour(0xff71717a));
-            g.setFont(juce::FontOptions(8.0f));
-            g.drawText(juce::String(i + 1), x, y, ledW, ledH, juce::Justification::centred);
+            int x = startX + (i % 12) * (ledW + gap);
+            int y = startY + (i / 12) * (ledH + gap + 4);
+
+            bool active = engine.voices[i].m_enable;
+            if (active)
+            {
+                g.setColour(juce::Colour(0xff4ade80));
+                g.fillRoundedRectangle((float)x, (float)y, (float)ledW, (float)ledH, 3.0f);
+                g.setColour(juce::Colours::black);
+                g.setFont(juce::FontOptions(9.0f, juce::Font::bold));
+                g.drawText(juce::String(engine.voices[i].m_midi_note), x, y, ledW, ledH, juce::Justification::centred);
+            }
+            else
+            {
+                g.setColour(juce::Colour(0xff27272a));
+                g.drawRoundedRectangle((float)x, (float)y, (float)ledW, (float)ledH, 3.0f, 1.0f);
+                g.setColour(juce::Colour(0xff71717a));
+                g.setFont(juce::FontOptions(8.0f));
+                g.drawText(juce::String(i + 1), x, y, ledW, ledH, juce::Justification::centred);
+            }
         }
     }
 }
@@ -292,8 +344,9 @@ void AP10AudioProcessorEditor::resized()
     releaseLabel.setBounds(generalKnobX - 4, 42, knobW + 8, 14);
     releaseKnob.setBounds(generalKnobX, 56, knobW, knobH);
 
-    // 1. voiceCountLabel placed right next to "GT913 24-VOICE POLYPHONY MATRIX"
-    voiceCountLabel.setBounds(240, 126, 120, 18);
+    // 1. voiceCountLabel & voiceModeButton placed right next to "GT913 POLYPHONY MATRIX"
+    voiceCountLabel.setBounds(240, 126, 95, 18);
+    voiceModeButton.setBounds(340, 126, 75, 18);
 
     // 88-Key Interactive Piano Keyboard (placed directly above the console, with 10px gap below polyphony LEDs)
     keyboardComponent.setBounds(15, 192, getWidth() - 30, 64);

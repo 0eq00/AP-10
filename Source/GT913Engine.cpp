@@ -654,6 +654,17 @@ GT913Engine::~GT913Engine()
 {
 }
 
+void GT913Engine::setMaxVoices(int count)
+{
+    max_voices = (count == 88) ? 88 : 24;
+    for (int i = max_voices; i < MAX_VOICES; ++i)
+    {
+        voices[i].m_enable = false;
+        voices[i].m_volume_current = 0;
+        voices[i].m_env_stage = 0;
+    }
+}
+
 void GT913Engine::setTone(int index)
 {
     if (index < 0 || index >= 5) return;
@@ -808,7 +819,7 @@ void GT913Engine::noteOn(int midiNote, int velocity)
 {
     int targetIdx = -1;
 
-    for (int i = 0; i < MAX_VOICES; ++i)
+    for (int i = 0; i < max_voices; ++i)
     {
         if (voices[i].m_enable && voices[i].m_midi_note == midiNote)
         {
@@ -819,7 +830,7 @@ void GT913Engine::noteOn(int midiNote, int velocity)
 
     if (targetIdx == -1)
     {
-        for (int i = 0; i < MAX_VOICES; ++i)
+        for (int i = 0; i < max_voices; ++i)
         {
             if (!voices[i].m_enable)
             {
@@ -832,7 +843,7 @@ void GT913Engine::noteOn(int midiNote, int velocity)
     if (targetIdx == -1)
     {
         uint32_t lowestVol = 0xFFFFFFFF;
-        for (int i = 0; i < MAX_VOICES; ++i)
+        for (int i = 0; i < max_voices; ++i)
         {
             uint32_t v = voices[i].m_volume_current;
             if (voices[i].m_is_releasing) v /= 4;
@@ -913,7 +924,7 @@ void GT913Engine::noteOn(int midiNote, int velocity)
 
 void GT913Engine::noteOff(int midiNote)
 {
-    for (int i = 0; i < MAX_VOICES; ++i)
+    for (int i = 0; i < max_voices; ++i)
     {
         if (voices[i].m_enable && voices[i].m_midi_note == midiNote && !voices[i].m_is_releasing)
         {
@@ -938,7 +949,7 @@ void GT913Engine::setDamperPedal(bool down)
     damper_pedal = down;
     if (!down)
     {
-        for (int i = 0; i < MAX_VOICES; ++i)
+        for (int i = 0; i < max_voices; ++i)
         {
             if (voices[i].m_enable && voices[i].m_is_releasing && voices[i].m_env_stage != 4)
             {
