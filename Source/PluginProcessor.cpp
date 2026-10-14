@@ -118,6 +118,9 @@ void AP10AudioProcessor::prepareToPlay (double sampleRate, int /*samplesPerBlock
     srcRatioCounter = 0.0;
     lpfLeft1 = lpfLeft2 = lpfRight1 = lpfRight2 = 0.0f;
 
+    // Band-limited conversion from the engine rate (about 114.5 kHz) to the host rate
+    resampler.prepare(GT913Engine::HARDWARE_SAMPLE_RATE, sampleRate);
+
     addDebugLog("GT913: prepareToPlay at host rate " + juce::String(sampleRate) + " Hz");
 
     if (!engine.isRomLoaded())
@@ -205,20 +208,14 @@ void AP10AudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::M
     auto* channelDataLeft  = buffer.getWritePointer(0);
     auto* channelDataRight = buffer.getWritePointer(1);
 
-    const double srcSampleRate = GT913Engine::HARDWARE_SAMPLE_RATE;
-    const double dstSampleRate = hostSampleRate;
     const float softMultiplier = engine.soft_pedal ? 0.7f : 1.0f;
     const float masterVol = 0.5f * softMultiplier;
 
     for (int i = 0; i < buffer.getNumSamples(); ++i)
     {
-        srcRatioCounter += (srcSampleRate / dstSampleRate);
-
-        int64_t accumulatedLeft  = 0;
-        int64_t accumulatedRight = 0;
-        int subSamplesMixed = 0;
-
-        while (srcRatioCounter >= 1.0)
+        // Run the engine at its own rate (about 114.5 kHz) until the resampler
+        // has enough source frames for the next output sample.
+        while (resampler.needsInput())
         {
             int64_t stepLeft = 0;
             int64_t stepRight = 0;
@@ -236,34 +233,13 @@ void AP10AudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::M
                 }
             }
 
-            accumulatedLeft  += stepLeft;
-            accumulatedRight += stepRight;
-            subSamplesMixed++;
-
-            srcRatioCounter -= 1.0;
+            resampler.push(static_cast<float>(stepLeft)  / 45000000000.0f,
+                           static_cast<float>(stepRight) / 45000000000.0f);
         }
 
         float finalLeft  = 0.0f;
         float finalRight = 0.0f;
-
-        if (subSamplesMixed > 0)
-        {
-            float rawL = static_cast<float>(accumulatedLeft / subSamplesMixed)  / 45000000000.0f;
-            float rawR = static_cast<float>(accumulatedRight / subSamplesMixed) / 45000000000.0f;
-
-            lpfLeft1 += lpfAlpha * (rawL - lpfLeft1);
-            lpfLeft2 += lpfAlpha * (lpfLeft1 - lpfLeft2);
-            lpfRight1 += lpfAlpha * (rawR - lpfRight1);
-            lpfRight2 += lpfAlpha * (lpfRight1 - lpfRight2);
-
-            finalLeft  = lpfLeft2;
-            finalRight = lpfRight2;
-        }
-        else if (i > 0)
-        {
-            finalLeft  = channelDataLeft[i - 1];
-            finalRight = channelDataRight[i - 1];
-        }
+        resampler.pop(finalLeft, finalRight);
 
         channelDataLeft[i]  = juce::jlimit(-1.0f, 1.0f, finalLeft * masterVol);
         channelDataRight[i] = juce::jlimit(-1.0f, 1.0f, finalRight * masterVol);

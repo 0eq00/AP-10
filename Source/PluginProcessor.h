@@ -10,6 +10,7 @@
 
 #include <JuceHeader.h>
 #include "GT913Engine.h"
+#include "GT913Resampler.h"
 
 class AP10AudioProcessor : public juce::AudioProcessor
 {
@@ -57,6 +58,7 @@ public:
 
 private:
     GT913Engine engine;
+    GT913Resampler resampler;
     juce::MidiKeyboardState keyboardState;
 
     double srcRatioCounter = 0.0;
