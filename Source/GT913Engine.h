@@ -54,9 +54,7 @@ public:
         bool     m_is_releasing = false;
         int      m_env_stage = 0; // 0: idle, 1: attack, 2: decay, 3: sustain, 4: release
         int      m_preset_id = 0; // 0: Piano, 1: E.Piano, 2: Harpsichord, 3: Organ, 4: Strings
-        uint32_t m_decay_rate = 0x00001000;
         uint32_t m_release_rate = 0x00080000;
-        uint32_t m_sustain_level = 0;
 
         // Firmware-style multi-stage envelope (see GT913EnvTables.h)
         const GT913EnvZone* m_env_zone = nullptr; // null = legacy decay/sustain/release envelope
@@ -83,8 +81,8 @@ public:
         uint32_t addr_loop;
         uint32_t pitch;
         uint8_t  exp;
-        uint32_t volume_target;
-        uint32_t volume_rate;
+        uint32_t unused_volume_target;
+        uint32_t unused_volume_rate;
         uint16_t gain;
     };
 
@@ -93,9 +91,6 @@ public:
     {
         const char*          name;
         const PianoKeyParam* key_map;
-        uint32_t             decay_rate;
-        uint32_t             release_rate;
-        uint32_t             sustain_level;
     };
 
     static const PianoKeyParam piano_key_map[88];

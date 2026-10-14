@@ -499,11 +499,11 @@ const GT913Engine::PianoKeyParam GT913Engine::strings_key_map[88] = {
 };
 
 const GT913Engine::TonePreset GT913Engine::presets[5] = {
-    { "Grand Piano",  piano_key_map,       0x00001000, 0x00010000, 0 },
-    { "E. Piano",     epiano_key_map,      0x00000C00, 0x00070000, 0 },
-    { "Harpsichord",  harpsichord_key_map, 0x00002000, 0x00010000, 0 },
-    { "Pipe Organ",   organ_key_map,       0x00000200, 0x00010000, 0x70000000 },
-    { "Strings",      strings_key_map,     0x00000100, 0x00010000, 0x56000000 }
+    { "Grand Piano",  piano_key_map },
+    { "E. Piano",     epiano_key_map },
+    { "Harpsichord",  harpsichord_key_map },
+    { "Pipe Organ",   organ_key_map },
+    { "Strings",      strings_key_map }
 };
 
 const uint32_t GT913Engine::velocity_volume_target[5][128] = {
@@ -719,16 +719,6 @@ void GT913Engine::setReleaseMultiplier(float mult)
     }
 }
 
-void GT913Engine::setEnvelopeParams(int presetIndex, uint32_t decay, uint32_t release, uint32_t sustain)
-{
-    if (presetIndex >= 0 && presetIndex < 5)
-    {
-        mod_presets[presetIndex].decay_rate = decay;
-        mod_presets[presetIndex].release_rate = release;
-        mod_presets[presetIndex].sustain_level = sustain;
-    }
-}
-
 void GT913Engine::reset()
 {
     for (int i = 0; i < MAX_VOICES; ++i)
@@ -896,7 +886,7 @@ void GT913Engine::noteOn(int midiNote, int velocity)
 
         v.m_volume_current = 0;
         v.m_volume_target  = targetVolume;
-        v.m_volume_rate    = keyParam.volume_rate;
+        v.m_volume_rate    = 0;
         v.m_env_stage      = 1;
 
         v.m_balance[0]     = 7;

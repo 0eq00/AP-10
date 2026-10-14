@@ -47,7 +47,6 @@ AP10AudioProcessorEditor::AP10AudioProcessorEditor (AP10AudioProcessor& p)
                 const auto& preset = audioProcessor.getEngine().getCurrentPreset();
 
                 audioProcessor.addDebugLog("GUI Tone Changed: " + juce::String(preset.name));
-                statusLabel.setText("Tone: " + juce::String(preset.name), juce::dontSendNotification);
             }
         };
     }
