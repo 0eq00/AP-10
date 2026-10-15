@@ -324,31 +324,28 @@ void AP10AudioProcessorEditor::resized()
     titleLabel.setBounds(15, 11, 56, 28);
     subtitleLabel.setBounds(72, 13, 132, 24);
 
-    // 2. 5 Tone toggle buttons on top header bar
-    int btnW = 88;
-    int btnH = 28;
+    // 2. 5 Tone toggle buttons on top header bar (compact size matching font, equal width, aligned to right)
+    int btnW = 74;
+    int btnH = 22;
     int btnGap = 4;
     int btnStartX = getWidth() - 15 - (5 * btnW + 4 * btnGap); // aligned to right
     for (int i = 0; i < 5; ++i)
     {
-        toneButtons[i].setBounds(btnStartX + i * (btnW + btnGap), 11, btnW, btnH);
+        toneButtons[i].setBounds(btnStartX + i * (btnW + btnGap), 14, btnW, btnH);
     }
 
-    // Release Knobs:
-    // pianoHighReleaseKnob is placed at the current releaseKnob position (directly under Strings button)
-    // releaseKnob is shifted to the left
-    int stringsBtnX = btnStartX + 4 * (btnW + btnGap);
+    // Release Knobs (Restored to original positions, independent of tone button size/position):
     int knobW = 56;
     int knobH = 58;
     int gapKnob = 8;
 
-    // Special Piano 92+ knob directly beneath Strings:
-    int specialKnobX = stringsBtnX + (btnW - knobW) / 2;
+    // Special Piano 92+ knob (original position at x = 593):
+    int specialKnobX = getWidth() - 15 - knobW - 16; // 593
     pianoHighReleaseLabel.setBounds(specialKnobX - 4, 42, knobW + 8, 14);
     pianoHighReleaseKnob.setBounds(specialKnobX, 56, knobW, knobH);
 
-    // General releaseKnob shifted to the left:
-    int generalKnobX = specialKnobX - knobW - gapKnob;
+    // General releaseKnob (original position at x = 529):
+    int generalKnobX = specialKnobX - knobW - gapKnob; // 529
     releaseLabel.setBounds(generalKnobX - 4, 42, knobW + 8, 14);
     releaseKnob.setBounds(generalKnobX, 56, knobW, knobH);
 
