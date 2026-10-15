@@ -69,20 +69,15 @@ AP10AudioProcessorEditor::AP10AudioProcessorEditor (AP10AudioProcessor& p)
     if (initTone >= 0 && initTone < 5)
         toneButtons[initTone].setToggleState(true, juce::dontSendNotification);
 
-    // Release Rate Multiplier Rotary Knob (positioned directly beneath Strings button)
+    // Release Rate Multiplier Rotary Knob (custom minimalist ring knob matching knob.png)
     addAndMakeVisible(releaseKnob);
+    releaseKnob.setLookAndFeel(&ringKnobLookAndFeel);
     releaseKnob.setSliderStyle(juce::Slider::RotaryVerticalDrag);
     releaseKnob.setTextBoxStyle(juce::Slider::TextBoxBelow, false, 54, 16);
     releaseKnob.setRange(0.1, 5.0, 0.05);
     releaseKnob.setValue(audioProcessor.getEngine().getReleaseMultiplier(), juce::dontSendNotification);
     releaseKnob.setTextValueSuffix("x");
     releaseKnob.setDoubleClickReturnValue(true, 1.0);
-    releaseKnob.setColour(juce::Slider::rotarySliderFillColourId, juce::Colour(0xfffbbf24));
-    releaseKnob.setColour(juce::Slider::rotarySliderOutlineColourId, juce::Colour(0xff27272a));
-    releaseKnob.setColour(juce::Slider::thumbColourId, juce::Colour(0xff4ade80));
-    releaseKnob.setColour(juce::Slider::textBoxTextColourId, juce::Colour(0xffe4e4e7));
-    releaseKnob.setColour(juce::Slider::textBoxBackgroundColourId, juce::Colour(0xff18181b));
-    releaseKnob.setColour(juce::Slider::textBoxOutlineColourId, juce::Colour(0xff27272a));
     releaseKnob.onValueChange = [this]()
     {
         float mult = static_cast<float>(releaseKnob.getValue());
@@ -94,20 +89,16 @@ AP10AudioProcessorEditor::AP10AudioProcessorEditor (AP10AudioProcessor& p)
     releaseLabel.setFont(juce::FontOptions(10.0f));
     releaseLabel.setJustificationType(juce::Justification::centred);
     releaseLabel.setColour(juce::Label::textColourId, juce::Colour(0xffa1a1aa));
+
     // Special Piano 92+ Release Rate Multiplier Knob (placed directly beneath Strings button)
     addAndMakeVisible(pianoHighReleaseKnob);
+    pianoHighReleaseKnob.setLookAndFeel(&ringKnobLookAndFeel);
     pianoHighReleaseKnob.setSliderStyle(juce::Slider::RotaryVerticalDrag);
     pianoHighReleaseKnob.setTextBoxStyle(juce::Slider::TextBoxBelow, false, 54, 16);
     pianoHighReleaseKnob.setRange(0.1, 5.0, 0.05);
     pianoHighReleaseKnob.setValue(audioProcessor.getEngine().getPianoHighReleaseMultiplier(), juce::dontSendNotification);
     pianoHighReleaseKnob.setTextValueSuffix("x");
     pianoHighReleaseKnob.setDoubleClickReturnValue(true, 1.0);
-    pianoHighReleaseKnob.setColour(juce::Slider::rotarySliderFillColourId, juce::Colour(0xff38bdf8));
-    pianoHighReleaseKnob.setColour(juce::Slider::rotarySliderOutlineColourId, juce::Colour(0xff27272a));
-    pianoHighReleaseKnob.setColour(juce::Slider::thumbColourId, juce::Colour(0xff38bdf8));
-    pianoHighReleaseKnob.setColour(juce::Slider::textBoxTextColourId, juce::Colour(0xffe4e4e7));
-    pianoHighReleaseKnob.setColour(juce::Slider::textBoxBackgroundColourId, juce::Colour(0xff18181b));
-    pianoHighReleaseKnob.setColour(juce::Slider::textBoxOutlineColourId, juce::Colour(0xff27272a));
     pianoHighReleaseKnob.onValueChange = [this]()
     {
         float mult = static_cast<float>(pianoHighReleaseKnob.getValue());
@@ -118,7 +109,7 @@ AP10AudioProcessorEditor::AP10AudioProcessorEditor (AP10AudioProcessor& p)
     pianoHighReleaseLabel.setText("Piano 92+ Rel", juce::dontSendNotification);
     pianoHighReleaseLabel.setFont(juce::FontOptions(10.0f));
     pianoHighReleaseLabel.setJustificationType(juce::Justification::centred);
-    pianoHighReleaseLabel.setColour(juce::Label::textColourId, juce::Colour(0xff38bdf8));
+    pianoHighReleaseLabel.setColour(juce::Label::textColourId, juce::Colour(0xff38bfa0));
 
 
     // 88-Key Interactive Piano Keyboard (playable with mouse, velocity varies with click Y position)
@@ -178,6 +169,8 @@ AP10AudioProcessorEditor::AP10AudioProcessorEditor (AP10AudioProcessor& p)
 AP10AudioProcessorEditor::~AP10AudioProcessorEditor()
 {
     stopTimer();
+    releaseKnob.setLookAndFeel(nullptr);
+    pianoHighReleaseKnob.setLookAndFeel(nullptr);
 }
 
 void AP10AudioProcessorEditor::timerCallback()
