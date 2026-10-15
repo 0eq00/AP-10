@@ -21,19 +21,21 @@ AP10AudioProcessorEditor::AP10AudioProcessorEditor (AP10AudioProcessor& p)
     // 1. voiceCountLabel: Font size matched to 11.0f (placed next to matrix title)
     addAndMakeVisible(voiceCountLabel);
     voiceCountLabel.setText("Voices: 0 / " + juce::String(audioProcessor.getMaxVoices()), juce::dontSendNotification);
-    voiceCountLabel.setColour(juce::Label::textColourId, juce::Colour(0xff4ade80));
+    voiceCountLabel.setColour(juce::Label::textColourId, juce::Colour(myColor::activeTeal));
     voiceCountLabel.setFont(juce::FontOptions(11.0f));
 
     // Polyphony Mode Toggle Button (24-Voice default vs 88-Voice)
     addAndMakeVisible(voiceModeButton);
     voiceModeButton.setButtonText(audioProcessor.getMaxVoices() == 88 ? "88 Voices" : "24 Voices");
     voiceModeButton.setColour(juce::TextButton::buttonColourId, juce::Colour(0xff18181b));
-    voiceModeButton.setColour(juce::TextButton::textColourOffId, juce::Colour(0xff38bdf8));
+    voiceModeButton.setColour(juce::TextButton::textColourOffId, juce::Colour(myColor::activeTeal));
     voiceModeButton.onClick = [this]()
     {
         int newLimit = (audioProcessor.getMaxVoices() == 24) ? 88 : 24;
         audioProcessor.setMaxVoices(newLimit);
         voiceModeButton.setButtonText(newLimit == 88 ? "88 Voices" : "24 Voices");
+        voiceModeButton.setColour(juce::TextButton::textColourOffId, juce::Colour(newLimit == 88 ? myColor::activePink : myColor::activeTeal));
+        voiceCountLabel.setColour(juce::Label::textColourId, juce::Colour(newLimit == 88 ? myColor::activePink : myColor::activeTeal));
         voiceCountLabel.setText("Voices: " + juce::String(audioProcessor.getActiveVoiceCount()) + " / " + juce::String(newLimit), juce::dontSendNotification);
         repaint();
     };
@@ -49,7 +51,7 @@ AP10AudioProcessorEditor::AP10AudioProcessorEditor (AP10AudioProcessor& p)
         toneButtons[i].setColour(juce::TextButton::buttonColourId, juce::Colour(0xff18181b));
         toneButtons[i].setColour(juce::TextButton::buttonOnColourId, juce::Colour(0xff27272a));
         toneButtons[i].setColour(juce::TextButton::textColourOffId, juce::Colour(0xffa1a1aa));
-        toneButtons[i].setColour(juce::TextButton::textColourOnId, juce::Colour(0xff4ade80));
+        toneButtons[i].setColour(juce::TextButton::textColourOnId, juce::Colour(myColor::activeTeal));
 
         toneButtons[i].onClick = [this, i]()
         {
@@ -109,7 +111,7 @@ AP10AudioProcessorEditor::AP10AudioProcessorEditor (AP10AudioProcessor& p)
     pianoHighReleaseLabel.setText("Piano 92+ Rel", juce::dontSendNotification);
     pianoHighReleaseLabel.setFont(juce::FontOptions(10.0f));
     pianoHighReleaseLabel.setJustificationType(juce::Justification::centred);
-    pianoHighReleaseLabel.setColour(juce::Label::textColourId, juce::Colour(0xff38bfa0));
+    pianoHighReleaseLabel.setColour(juce::Label::textColourId, juce::Colour(0xffa1a1aa));
 
 
     // 88-Key Interactive Piano Keyboard (playable with mouse, velocity varies with click Y position)
@@ -132,7 +134,7 @@ AP10AudioProcessorEditor::AP10AudioProcessorEditor (AP10AudioProcessor& p)
     consoleOutput.setCaretVisible(false);
     consoleOutput.setColour(juce::TextEditor::backgroundColourId, juce::Colour(0xff18181b));
     consoleOutput.setColour(juce::TextEditor::outlineColourId, juce::Colour(0xff27272a));
-    consoleOutput.setColour(juce::TextEditor::textColourId, juce::Colour(0xff4ade80));
+    consoleOutput.setColour(juce::TextEditor::textColourId, juce::Colour(myColor::activeTeal));
     consoleOutput.setVisible(false);
 
     // Small toggle button at the bottom-right corner
@@ -142,7 +144,7 @@ AP10AudioProcessorEditor::AP10AudioProcessorEditor (AP10AudioProcessor& p)
     toggleConsoleButton.setColour(juce::TextButton::buttonColourId, juce::Colour(0xff18181b));
     toggleConsoleButton.setColour(juce::TextButton::buttonOnColourId, juce::Colour(0xff27272a));
     toggleConsoleButton.setColour(juce::TextButton::textColourOffId, juce::Colour(0xffa1a1aa));
-    toggleConsoleButton.setColour(juce::TextButton::textColourOnId, juce::Colour(0xff4ade80));
+    toggleConsoleButton.setColour(juce::TextButton::textColourOnId, juce::Colour(myColor::activeTeal));
 
     toggleConsoleButton.onClick = [this]()
     {
@@ -262,7 +264,7 @@ void AP10AudioProcessorEditor::paint (juce::Graphics& g)
             bool active = engine.voices[i].m_enable;
             if (active)
             {
-                g.setColour(juce::Colour(0xff38bdf8));
+                g.setColour(juce::Colour(myColor::activePink));
                 g.fillRoundedRectangle((float)x, (float)y, (float)ledW, (float)ledH, 2.0f);
             }
             else
@@ -287,7 +289,7 @@ void AP10AudioProcessorEditor::paint (juce::Graphics& g)
             bool active = engine.voices[i].m_enable;
             if (active)
             {
-                g.setColour(juce::Colour(0xff4ade80));
+                g.setColour(juce::Colour(myColor::activeTeal));
                 g.fillRoundedRectangle((float)x, (float)y, (float)ledW, (float)ledH, 3.0f);
                 g.setColour(juce::Colours::black);
                 g.setFont(juce::FontOptions(9.0f, juce::Font::bold));

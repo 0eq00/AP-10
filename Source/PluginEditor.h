@@ -11,14 +11,23 @@
 #include <JuceHeader.h>
 #include "PluginProcessor.h"
 
+namespace myColor
+{
+    static const juce::uint32 activeTeal   = 0xff38bfa0;
+    static const juce::uint32 activePink   = 0xffBA3896;
+    static const juce::uint32 textWhite    = 0xffe4e4e7;
+    static const juce::uint32 bgBlack      = 0xff121920;
+    static const juce::uint32 outlineBlack = 0xff22303c;
+}
+
 class MinimalRingKnobLookAndFeel : public juce::LookAndFeel_V4
 {
 public:
     MinimalRingKnobLookAndFeel()
     {
-        setColour (juce::Slider::textBoxTextColourId, juce::Colour (0xffe4e4e7));
-        setColour (juce::Slider::textBoxBackgroundColourId, juce::Colour (0xff121920));
-        setColour (juce::Slider::textBoxOutlineColourId, juce::Colour (0xff22303c));
+        setColour (juce::Slider::textBoxTextColourId, juce::Colour (myColor::textWhite));
+        setColour (juce::Slider::textBoxBackgroundColourId, juce::Colour (myColor::bgBlack));
+        setColour (juce::Slider::textBoxOutlineColourId, juce::Colour (myColor::outlineBlack));
     }
 
     void drawRotarySlider (juce::Graphics& g, int x, int y, int width, int height,
@@ -32,7 +41,7 @@ public:
         auto center = bounds.getCentre();
 
         // 1. Dark circular track (complete 360 circle matching knob.png)
-        g.setColour (juce::Colour (0xff22303c));
+        g.setColour (juce::Colour (myColor::outlineBlack));
         g.drawEllipse (center.x - arcRadius, center.y - arcRadius, arcRadius * 2.0f, arcRadius * 2.0f, lineW);
 
         // 2. Active arc in vibrant teal / seafoam (knob.png: #38bfa0)
@@ -41,7 +50,7 @@ public:
         {
             juce::Path activeArc;
             activeArc.addCentredArc (center.x, center.y, arcRadius, arcRadius, 0.0f, rotaryStartAngle, toAngle, true);
-            g.setColour (juce::Colour (0xff38bfa0));
+            g.setColour (juce::Colour (myColor::activeTeal));
             g.strokePath (activeArc, juce::PathStrokeType (lineW, juce::PathStrokeType::curved, juce::PathStrokeType::rounded));
         }
 
