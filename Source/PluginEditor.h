@@ -62,6 +62,12 @@ public:
         g.setColour (juce::Colours::white);
         g.fillEllipse (thumbX - thumbRadius, thumbY - thumbRadius, thumbRadius * 2.0f, thumbRadius * 2.0f);
     }
+
+    // Smaller font for Tone Preset Toggle Buttons
+    juce::Font getTextButtonFont (juce::TextButton& /*button*/, int /*buttonHeight*/) override
+    {
+        return juce::Font (juce::FontOptions (10.5f));
+    }
 };
 
 class AP10AudioProcessorEditor : public juce::AudioProcessorEditor,
@@ -79,7 +85,10 @@ private:
     AP10AudioProcessor& audioProcessor;
     MinimalRingKnobLookAndFeel ringKnobLookAndFeel;
 
-    juce::Label statusLabel;
+    // Two separate top-left labels: "AP-10" (larger font) & "GT913 Sound Engine" (smaller font)
+    juce::Label titleLabel;
+    juce::Label subtitleLabel;
+
     juce::Label voiceCountLabel;
     // Polyphony Mode Switch Button (24-Voice default vs 88-Voice)
     juce::TextButton voiceModeButton;

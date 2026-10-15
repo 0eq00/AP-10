@@ -13,10 +13,18 @@ AP10AudioProcessorEditor::AP10AudioProcessorEditor (AP10AudioProcessor& p)
     : AudioProcessorEditor (&p), audioProcessor (p),
       keyboardComponent (p.getKeyboardState(), juce::MidiKeyboardComponent::horizontalKeyboard)
 {
-    addAndMakeVisible(statusLabel);
-    statusLabel.setText("AP-10 (GT913 Sound Engine)", juce::dontSendNotification);
-    statusLabel.setColour(juce::Label::textColourId, juce::Colours::white);
-    statusLabel.setFont(juce::FontOptions(14.0f, juce::Font::bold));
+    // 1. Two separate top-left labels: "AP-10" (larger font) & "GT913 Sound Engine" (smaller font)
+    addAndMakeVisible(titleLabel);
+    titleLabel.setText("AP-10", juce::dontSendNotification);
+    titleLabel.setColour(juce::Label::textColourId, juce::Colour(myColor::textWhite));
+    titleLabel.setFont(juce::FontOptions(17.0f, juce::Font::bold));
+    titleLabel.setJustificationType(juce::Justification::centredLeft);
+
+    addAndMakeVisible(subtitleLabel);
+    subtitleLabel.setText("GT913 Sound Engine", juce::dontSendNotification);
+    subtitleLabel.setColour(juce::Label::textColourId, juce::Colour(0xffa1a1aa));
+    subtitleLabel.setFont(juce::FontOptions(10.5f, juce::Font::plain));
+    subtitleLabel.setJustificationType(juce::Justification::centredLeft);
 
     // 1. voiceCountLabel: Font size matched to 11.0f (placed next to matrix title)
     addAndMakeVisible(voiceCountLabel);
@@ -40,10 +48,11 @@ AP10AudioProcessorEditor::AP10AudioProcessorEditor (AP10AudioProcessor& p)
         repaint();
     };
 
-    // 2. 5 Tone Preset Toggle Buttons (replacing ComboBox)
+    // 2. 5 Tone Preset Toggle Buttons (replacing ComboBox) with smaller font
     const juce::String buttonNames[5] = { "Piano", "E. Piano", "Harpsichord", "Pipe Organ", "Strings" };
     for (int i = 0; i < 5; ++i)
     {
+        toneButtons[i].setLookAndFeel(&ringKnobLookAndFeel);
         toneButtons[i].setButtonText(buttonNames[i]);
         addAndMakeVisible(toneButtons[i]);
         toneButtons[i].setRadioGroupId(1001);
@@ -173,6 +182,8 @@ AP10AudioProcessorEditor::~AP10AudioProcessorEditor()
     stopTimer();
     releaseKnob.setLookAndFeel(nullptr);
     pianoHighReleaseKnob.setLookAndFeel(nullptr);
+    for (int i = 0; i < 5; ++i)
+        toneButtons[i].setLookAndFeel(nullptr);
 }
 
 void AP10AudioProcessorEditor::timerCallback()
@@ -309,7 +320,9 @@ void AP10AudioProcessorEditor::paint (juce::Graphics& g)
 
 void AP10AudioProcessorEditor::resized()
 {
-    statusLabel.setBounds(15, 12, 185, 26);
+    // 1. Two separate top-left labels: "AP-10" (larger font) & "GT913 Sound Engine" (smaller font)
+    titleLabel.setBounds(15, 11, 56, 28);
+    subtitleLabel.setBounds(72, 13, 132, 24);
 
     // 2. 5 Tone toggle buttons on top header bar
     int btnW = 88;
