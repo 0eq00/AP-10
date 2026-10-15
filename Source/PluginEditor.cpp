@@ -16,8 +16,8 @@ AP10AudioProcessorEditor::AP10AudioProcessorEditor (AP10AudioProcessor& p)
     // 1. Two separate top-left labels: "AP-10" (larger font) & "GT913 Sound Engine" (smaller font)
     addAndMakeVisible(titleLabel);
     titleLabel.setText("AP-10", juce::dontSendNotification);
-    titleLabel.setColour(juce::Label::textColourId, juce::Colour(myColor::textWhite));
-    titleLabel.setFont(juce::FontOptions(17.0f, juce::Font::bold));
+    titleLabel.setColour(juce::Label::textColourId, juce::Colour(myColor::activeTeal));
+    titleLabel.setFont(juce::FontOptions(19.0f, juce::Font::bold));
     titleLabel.setJustificationType(juce::Justification::centredLeft);
 
     addAndMakeVisible(subtitleLabel);
@@ -97,7 +97,7 @@ AP10AudioProcessorEditor::AP10AudioProcessorEditor (AP10AudioProcessor& p)
 
     addAndMakeVisible(releaseLabel);
     releaseLabel.setText("Release Rate", juce::dontSendNotification);
-    releaseLabel.setFont(juce::FontOptions(10.0f));
+    releaseLabel.setFont(juce::FontOptions(11.0f));
     releaseLabel.setJustificationType(juce::Justification::centred);
     releaseLabel.setColour(juce::Label::textColourId, juce::Colour(0xffa1a1aa));
 
@@ -118,7 +118,7 @@ AP10AudioProcessorEditor::AP10AudioProcessorEditor (AP10AudioProcessor& p)
 
     addAndMakeVisible(pianoHighReleaseLabel);
     pianoHighReleaseLabel.setText("Piano 92+ Rel", juce::dontSendNotification);
-    pianoHighReleaseLabel.setFont(juce::FontOptions(10.0f));
+    pianoHighReleaseLabel.setFont(juce::FontOptions(11.0f));
     pianoHighReleaseLabel.setJustificationType(juce::Justification::centred);
     pianoHighReleaseLabel.setColour(juce::Label::textColourId, juce::Colour(0xffa1a1aa));
 
