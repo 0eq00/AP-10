@@ -905,6 +905,7 @@ void GT913Engine::noteOn(int midiNote, int velocity)
 
         // Firmware envelope: the stage words are logged at velocity 127 and scaled by the velocity
         v.m_env_zone = nullptr;
+        v.m_vib = GT913EpVibrato::State();
         const GT913EnvZone* zone = findEnvZone(current_preset, clampedNote);
         if (zone != nullptr && zone->num_words > 0)
         {
@@ -918,6 +919,10 @@ void GT913Engine::noteOn(int midiNote, int velocity)
             v.m_release_rate  = std::max<uint32_t>(1, static_cast<uint32_t>(gt913_env_rate(zone->release) * effMult));
             v.m_poll_timer    = nextPollPhaseTicks();
             v.m_env_stage     = 1;
+
+            // E.Piano: the firmware also rewrites the pitch at every poll (vibrato)
+            if (current_preset == 1)
+                GT913EpVibrato::start(v.m_vib, clampedNote, v.m_pitch, v.m_poll_timer);
         }
     }
 }
@@ -976,6 +981,9 @@ void GT913Engine::update_envelope(Voice& v)
     if (!v.m_enable) return;
 
     if (v.m_env_zone == nullptr) return;
+
+    // E.Piano vibrato (no effect on the other tones). It stops at key-off (stage 4).
+    GT913EpVibrato::tick(v.m_vib, v.m_env_stage == 4, v.m_pitch);
 
     // 1. The volume moves toward the target by one rate step per tick, in either direction
     if (v.m_volume_current < v.m_volume_target)

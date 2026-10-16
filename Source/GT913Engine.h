@@ -14,6 +14,7 @@
 #include <cstring>
 #include <cmath>
 #include <algorithm>
+#include "GT913EpVibrato.h"
 
 // Firmware envelope zone (defined in GT913EnvTables.h, included from GT913Engine.cpp)
 struct GT913EnvZone;
@@ -68,6 +69,8 @@ public:
         uint32_t m_t1_v = 0;                      // first-stage target at this velocity
         uint32_t m_t1_127 = 0;                    // first-stage target at velocity 127
         uint32_t m_poll_timer = 0;                // ticks until the next firmware poll
+
+        GT913EpVibrato::State m_vib;              // E.Piano vibrato written by the firmware (pitch)
     };
 
     Voice voices[MAX_VOICES];
