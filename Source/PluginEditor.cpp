@@ -48,23 +48,30 @@ AP10AudioProcessorEditor::AP10AudioProcessorEditor (AP10AudioProcessor& p)
     }
     subtitleLabel.setJustificationType(juce::Justification::bottomLeft);
 
+    juce::Colour colorPolyMode;
+    if ( audioProcessor.getMaxVoices() == 88 )
+        colorPolyMode = juce::Colour(myColor::activePink);
+    else
+        colorPolyMode = juce::Colour(myColor::activeTeal);
+
     // 1. voiceCountLabel: Font size matched to 11.0f (placed next to matrix title)
     addAndMakeVisible(voiceCountLabel);
     voiceCountLabel.setText("Voices: 0 / " + juce::String(audioProcessor.getMaxVoices()), juce::dontSendNotification);
-    voiceCountLabel.setColour(juce::Label::textColourId, juce::Colour(myColor::activeTeal));
+    voiceCountLabel.setColour(juce::Label::textColourId, colorPolyMode);
     voiceCountLabel.setFont(juce::FontOptions(11.0f));
 
     // Polyphony Mode Toggle Button (24-Voice default vs 88-Voice)
     addAndMakeVisible(voiceModeButton);
     voiceModeButton.setButtonText(audioProcessor.getMaxVoices() == 88 ? "88 Voices" : "24 Voices");
-    voiceModeButton.setColour(juce::TextButton::buttonColourId, juce::Colour(0xff18181b));
-    voiceModeButton.setColour(juce::TextButton::textColourOffId, juce::Colour(myColor::activeTeal));
+    voiceModeButton.setColour(juce::TextButton::buttonColourId, colorPolyMode);
+    voiceModeButton.setColour(juce::TextButton::textColourOffId, juce::Colours::black);
+
     voiceModeButton.onClick = [this]()
     {
         int newLimit = (audioProcessor.getMaxVoices() == 24) ? 88 : 24;
         audioProcessor.setMaxVoices(newLimit);
         voiceModeButton.setButtonText(newLimit == 88 ? "88 Voices" : "24 Voices");
-        voiceModeButton.setColour(juce::TextButton::textColourOffId, juce::Colour(newLimit == 88 ? myColor::activePink : myColor::activeTeal));
+        voiceModeButton.setColour(juce::TextButton::buttonColourId, juce::Colour(newLimit == 88 ? myColor::activePink : myColor::activeTeal));
         voiceCountLabel.setColour(juce::Label::textColourId, juce::Colour(newLimit == 88 ? myColor::activePink : myColor::activeTeal));
         voiceCountLabel.setText("Voices: " + juce::String(audioProcessor.getActiveVoiceCount()) + " / " + juce::String(newLimit), juce::dontSendNotification);
         repaint();
