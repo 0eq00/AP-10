@@ -26,7 +26,7 @@ public:
     MinimalRingKnobLookAndFeel()
     {
         setColour (juce::Slider::textBoxTextColourId, juce::Colour (myColor::textWhite));
-        setColour (juce::Slider::textBoxBackgroundColourId, juce::Colour (myColor::bgBlack));
+        setColour (juce::Slider::textBoxBackgroundColourId, juce::Colour(myColor::outlineBlack));
         setColour (juce::Slider::textBoxOutlineColourId, juce::Colour (myColor::outlineBlack));
     }
 
@@ -67,6 +67,19 @@ public:
     juce::Font getTextButtonFont (juce::TextButton& /*button*/, int /*buttonHeight*/) override
     {
         return juce::Font (juce::FontOptions (10.5f));
+    }
+
+    juce::Font getLabelFont(juce::Label& label) override
+    {
+        if (auto* slider = label.getParentComponent())
+        {
+            if (dynamic_cast<juce::Slider*> (slider) != nullptr)
+            {
+                return juce::FontOptions(12.0f);
+            }
+        }
+
+        return juce::LookAndFeel_V4::getLabelFont(label);
     }
 };
 

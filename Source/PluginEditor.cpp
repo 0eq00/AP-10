@@ -17,14 +17,14 @@ AP10AudioProcessorEditor::AP10AudioProcessorEditor (AP10AudioProcessor& p)
     addAndMakeVisible(titleLabel);
     titleLabel.setText("AP-10", juce::dontSendNotification);
     titleLabel.setColour(juce::Label::textColourId, juce::Colour(myColor::activeTeal));
-    titleLabel.setFont(juce::FontOptions(19.0f, juce::Font::bold));
-    titleLabel.setJustificationType(juce::Justification::centredLeft);
+    titleLabel.setFont(juce::FontOptions(24.0f, juce::Font::bold));
+    titleLabel.setJustificationType(juce::Justification::bottomLeft);
 
     addAndMakeVisible(subtitleLabel);
     subtitleLabel.setText("GT913 Sound Engine", juce::dontSendNotification);
-    subtitleLabel.setColour(juce::Label::textColourId, juce::Colour(0xffa1a1aa));
+    subtitleLabel.setColour(juce::Label::textColourId, juce::Colours::white);
     subtitleLabel.setFont(juce::FontOptions(10.5f, juce::Font::plain));
-    subtitleLabel.setJustificationType(juce::Justification::centredLeft);
+    subtitleLabel.setJustificationType(juce::Justification::bottomLeft);
 
     // 1. voiceCountLabel: Font size matched to 11.0f (placed next to matrix title)
     addAndMakeVisible(voiceCountLabel);
@@ -321,8 +321,8 @@ void AP10AudioProcessorEditor::paint (juce::Graphics& g)
 void AP10AudioProcessorEditor::resized()
 {
     // 1. Two separate top-left labels: "AP-10" (larger font) & "GT913 Sound Engine" (smaller font)
-    titleLabel.setBounds(15, 11, 56, 28);
-    subtitleLabel.setBounds(72, 13, 132, 24);
+    titleLabel.setBounds(15, 6, 71, 34);
+    subtitleLabel.setBounds(87, 12, 132, 24);
 
     // 2. 5 Tone toggle buttons on top header bar (compact size matching font, equal width, aligned to right)
     int btnW = 74;
