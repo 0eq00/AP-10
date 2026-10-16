@@ -6,6 +6,8 @@
               pluginFormats="buildVST3">
   <MAINGROUP id="WaY5CJ" name="AP-10">
     <GROUP id="{8F8A863A-97A3-97EE-CBE6-E06C29536922}" name="Source">
+      <FILE id="J5Unev" name="Orbitron-SemiBold.ttf" compile="0" resource="1"
+            file="Assets/Orbitron-SemiBold.ttf"/>
       <FILE id="BAShPa" name="GT913Resampler.h" compile="0" resource="0"
             file="Source/GT913Resampler.h"/>
       <FILE id="FBvlzX" name="GT913EnvTables.h" compile="0" resource="0"

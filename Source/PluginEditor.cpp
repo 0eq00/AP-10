@@ -13,17 +13,39 @@ AP10AudioProcessorEditor::AP10AudioProcessorEditor (AP10AudioProcessor& p)
     : AudioProcessorEditor (&p), audioProcessor (p),
       keyboardComponent (p.getKeyboardState(), juce::MidiKeyboardComponent::horizontalKeyboard)
 {
+    auto fontData = BinaryData::OrbitronSemiBold_ttf;
+    auto fontSize = BinaryData::OrbitronSemiBold_ttfSize;
+    juce::Typeface::Ptr tf = juce::Typeface::createSystemTypefaceFor(fontData, fontSize);
+
     // 1. Two separate top-left labels: "AP-10" (larger font) & "GT913 Sound Engine" (smaller font)
     addAndMakeVisible(titleLabel);
     titleLabel.setText("AP-10", juce::dontSendNotification);
     titleLabel.setColour(juce::Label::textColourId, juce::Colour(myColor::activeTeal));
-    titleLabel.setFont(juce::FontOptions(24.0f, juce::Font::bold));
+    if (tf != nullptr)
+    {
+        juce::FontOptions fontOptions;
+        fontOptions = fontOptions.withTypeface(tf.get()).withHeight(24.0f);
+        titleLabel.setFont(juce::Font(fontOptions));
+    }
+    else
+    {
+        titleLabel.setFont(juce::FontOptions(24.0f, juce::Font::bold));
+    }
     titleLabel.setJustificationType(juce::Justification::bottomLeft);
 
     addAndMakeVisible(subtitleLabel);
     subtitleLabel.setText("GT913 Sound Engine", juce::dontSendNotification);
     subtitleLabel.setColour(juce::Label::textColourId, juce::Colours::white);
-    subtitleLabel.setFont(juce::FontOptions(10.5f, juce::Font::plain));
+    if (tf != nullptr)
+    {
+        juce::FontOptions fontOptions;
+        fontOptions = fontOptions.withTypeface(tf.get()).withHeight(11.0f);
+        subtitleLabel.setFont(juce::Font(fontOptions));
+    }
+    else
+    {
+        subtitleLabel.setFont(juce::FontOptions(10.5f, juce::Font::plain));
+    }
     subtitleLabel.setJustificationType(juce::Justification::bottomLeft);
 
     // 1. voiceCountLabel: Font size matched to 11.0f (placed next to matrix title)

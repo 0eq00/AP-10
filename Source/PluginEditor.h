@@ -14,7 +14,7 @@
 namespace myColor
 {
     static const juce::uint32 activeTeal   = 0xff38bfa0;
-    static const juce::uint32 activePink   = 0xffBA3896;
+    static const juce::uint32 activePink   = 0xffE645B9;
     static const juce::uint32 textWhite    = 0xffe4e4e7;
     static const juce::uint32 bgBlack      = 0xff121920;
     static const juce::uint32 outlineBlack = 0xff22303c;
