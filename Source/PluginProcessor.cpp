@@ -60,11 +60,22 @@ AP10AudioProcessor::AP10AudioProcessor()
                        )
 #endif
 {
+    initializeSostenuto();
     juce::File romFile = getDefaultRomFile();
     if (romFile.existsAsFile() && engine.loadAndDecryptRom(romFile, false))
     {
         addDebugLog("GT913: Loaded ROM : " + romFile.getFullPathName()
                     + " (" + juce::String(engine.getRomSize() / 1024) + " KB)!");
+    }
+}
+
+void AP10AudioProcessor::initializeSostenuto()
+{
+    isSostenutoPedalOn = false;
+    for (int i = 0; i < 128; ++i)
+    {
+        keyOn[i] = false;
+        sosOn[i] = false;
     }
 }
 
@@ -122,6 +133,7 @@ void AP10AudioProcessor::prepareToPlay (double sampleRate, int /*samplesPerBlock
     // Band-limited conversion from the engine rate (about 114.5 kHz) to the host rate
     resampler.prepare(GT913Engine::HARDWARE_SAMPLE_RATE, sampleRate);
 
+    initializeSostenuto();
     addDebugLog("GT913: prepareToPlay at host rate " + juce::String(sampleRate) + " Hz");
 
     if (!engine.isRomLoaded())
@@ -147,6 +159,7 @@ void AP10AudioProcessor::prepareToPlay (double sampleRate, int /*samplesPerBlock
 void AP10AudioProcessor::releaseResources()
 {
     engine.reset();
+    initializeSostenuto();
 }
 
 #ifndef JucePlugin_PreferredChannelConfigurations
@@ -170,16 +183,53 @@ void AP10AudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::M
     {
         auto msg = metadata.getMessage();
 
+        // MIDI CC#66 Sostenuto Pedal logic based on SostenutoPedal
+        if (msg.isSostenutoPedalOn())
+        {
+            isSostenutoPedalOn = true;
+            for (int i = 0; i < 128; ++i)
+            {
+                sosOn[i] = keyOn[i];
+            }
+            addDebugLog("CC#66 Sostenuto On");
+            continue;
+        }
+        else if (msg.isSostenutoPedalOff())
+        {
+            isSostenutoPedalOn = false;
+            for (int i = 0; i < 128; ++i)
+            {
+                if (sosOn[i] && !keyOn[i])
+                {
+                    engine.noteOff(i);
+                    addDebugLog("NoteOff (Sost): " + juce::String(i));
+                }
+                sosOn[i] = false;
+            }
+            addDebugLog("CC#66 Sostenuto Off");
+            continue;
+        }
+
         if (msg.isNoteOn())
         {
             int note = msg.getNoteNumber();
             int vel  = msg.getVelocity();
+            if (note >= 0 && note < 128)
+                keyOn[note] = true;
             engine.noteOn(note, vel);
             addDebugLog("NoteOn: " + juce::String(note) + " vel: " + juce::String(vel));
         }
         else if (msg.isNoteOff())
         {
             int note = msg.getNoteNumber();
+            if (note >= 0 && note < 128)
+            {
+                keyOn[note] = false;
+                if (sosOn[note])
+                {
+                    continue; // Key released but sustained by Sostenuto pedal
+                }
+            }
             engine.noteOff(note);
             addDebugLog("NoteOff: " + juce::String(note));
         }
@@ -190,6 +240,32 @@ void AP10AudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::M
                 bool down = msg.getControllerValue() >= 64;
                 engine.setDamperPedal(down);
             }
+            else if (msg.getControllerNumber() == 66)
+            {
+                // Fallback CC#66 handling if not caught by isSostenutoPedalOn/Off
+                bool down = msg.getControllerValue() >= 64;
+                if (down && !isSostenutoPedalOn)
+                {
+                    isSostenutoPedalOn = true;
+                    for (int i = 0; i < 128; ++i)
+                        sosOn[i] = keyOn[i];
+                    addDebugLog("CC#66 Sostenuto On");
+                }
+                else if (!down && isSostenutoPedalOn)
+                {
+                    isSostenutoPedalOn = false;
+                    for (int i = 0; i < 128; ++i)
+                    {
+                        if (sosOn[i] && !keyOn[i])
+                        {
+                            engine.noteOff(i);
+                            addDebugLog("NoteOff (Sost): " + juce::String(i));
+                        }
+                        sosOn[i] = false;
+                    }
+                    addDebugLog("CC#66 Sostenuto Off");
+                }
+            }
             else if (msg.getControllerNumber() == 67)
             {
                 bool down = msg.getControllerValue() >= 64;
@@ -198,6 +274,7 @@ void AP10AudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::M
             else if (msg.getControllerNumber() == 123)
             {
                 engine.reset();
+                initializeSostenuto();
             }
         }
         else if (msg.isProgramChange())

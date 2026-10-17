@@ -53,6 +53,12 @@ public:
     int getMaxVoices() const { return engine.getMaxVoices(); }
     void setMaxVoices(int count) { engine.setMaxVoices(count); }
 
+    // Sostenuto Pedal (MIDI CC#66) based on SostenutoPedal
+    void initializeSostenuto();
+    bool isSostenutoPedalOn = false;
+    bool keyOn[128] = { false };
+    bool sosOn[128] = { false };
+
     juce::MidiKeyboardState& getKeyboardState() { return keyboardState; }
 
     static juce::File getPluginDirectory();
