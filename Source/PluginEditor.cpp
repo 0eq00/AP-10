@@ -74,6 +74,7 @@ AP10AudioProcessorEditor::AP10AudioProcessorEditor (AP10AudioProcessor& p)
         voiceModeButton.setColour(juce::TextButton::buttonColourId, juce::Colour(newLimit == 88 ? myColor::activePink : myColor::activeTeal));
         voiceCountLabel.setColour(juce::Label::textColourId, juce::Colour(newLimit == 88 ? myColor::activePink : myColor::activeTeal));
         voiceCountLabel.setText("Voices: " + juce::String(audioProcessor.getActiveVoiceCount()) + " / " + juce::String(newLimit), juce::dontSendNotification);
+        updateKeyboardOverlayColour (newLimit);
         repaint();
     };
 
@@ -160,8 +161,7 @@ AP10AudioProcessorEditor::AP10AudioProcessorEditor (AP10AudioProcessor& p)
     keyboardComponent.setColour(juce::MidiKeyboardComponent::whiteNoteColourId, juce::Colour(0xfff4f4f5));
     keyboardComponent.setColour(juce::MidiKeyboardComponent::blackNoteColourId, juce::Colour(0xff18181b));
     keyboardComponent.setColour(juce::MidiKeyboardComponent::keySeparatorLineColourId, juce::Colour(0xff27272a));
-    keyboardComponent.setColour(juce::MidiKeyboardComponent::mouseOverKeyOverlayColourId, juce::Colour(0x204ade80));
-    keyboardComponent.setColour(juce::MidiKeyboardComponent::keyDownOverlayColourId, juce::Colour(0x804ade80)); // emerald green on key press
+    updateKeyboardOverlayColour (audioProcessor.getMaxVoices());
     keyboardComponent.setColour(juce::MidiKeyboardComponent::shadowColourId, juce::Colour(0x40000000));
 
     // 6 & 7. Collapsible Console Output (hidden by default, expands downwards on click)
@@ -228,7 +228,12 @@ void AP10AudioProcessorEditor::timerCallback()
     voiceCountLabel.setText("Voices: " + juce::String(active) + " / " + juce::String(maxV), juce::dontSendNotification);
     juce::String expectedMode = (maxV == 88) ? "88 Voices" : "24 Voices";
     if (voiceModeButton.getButtonText() != expectedMode)
+    {
         voiceModeButton.setButtonText(expectedMode);
+        voiceModeButton.setColour(juce::TextButton::buttonColourId, juce::Colour(maxV == 88 ? myColor::activePink : myColor::activeTeal));
+        voiceCountLabel.setColour(juce::Label::textColourId, juce::Colour(maxV == 88 ? myColor::activePink : myColor::activeTeal));
+        updateKeyboardOverlayColour (maxV);
+    }
 
     // Sync toggle button states if preset changed externally
     int currentToneId = audioProcessor.getEngine().current_preset;
@@ -401,4 +406,17 @@ void AP10AudioProcessorEditor::resized()
         consoleOutput.setBounds(0, 0, 0, 0);
         toggleConsoleButton.setBounds(getWidth() - 15 - toggleW, 263, toggleW, toggleH);
     }
+}
+
+
+void AP10AudioProcessorEditor::updateKeyboardOverlayColour (int maxVoices)
+{
+    const bool is88 = (maxVoices == 88);
+    const auto activeColour = juce::Colour (is88 ? myColor::activePink : myColor::activeTeal);
+
+    // Active playing key overlay: activeTeal (0xff38bfa0) in 24V mode, activePink (0xffE645B9) in 88V mode
+    keyboardComponent.setColour (juce::MidiKeyboardComponent::keyDownOverlayColourId,
+                                 activeColour.withAlpha (0.75f));
+    keyboardComponent.setColour (juce::MidiKeyboardComponent::mouseOverKeyOverlayColourId,
+                                 activeColour.withAlpha (0.25f));
 }

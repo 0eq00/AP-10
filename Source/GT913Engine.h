@@ -111,7 +111,8 @@ public:
     // Authentic Velocity-to-Target Volume mapping (from 11.Velocity.csv)
     // 5 Presets x 128 Velocity steps (0..127)
     static const uint32_t velocity_volume_target[5][128];
-    static uint32_t getVelocityVolumeTarget(int presetIndex, int velocity);
+    static const uint32_t velocity_volume_target_soft[5][128];
+    static uint32_t getVelocityVolumeTarget(int presetIndex, int velocity, bool isSoftPedal = false);
 
     // Preset calibration volume trim multipliers (Index 0: Piano, 1: E.Piano, 2: Harpsichord, 3: Organ, 4: Strings)
     // Matched to MAME AP-10 recording loudness ratios:

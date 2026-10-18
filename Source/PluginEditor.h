@@ -93,6 +93,7 @@ public:
     void paint (juce::Graphics&) override;
     void resized() override;
     void timerCallback() override;
+    void updateKeyboardOverlayColour (int maxVoices);
 
 private:
     AP10AudioProcessor& audioProcessor;
@@ -117,7 +118,20 @@ private:
     juce::Label  pianoHighReleaseLabel;
 
     // 88-Key Interactive Piano Keyboard (placed above the console)
-    juce::MidiKeyboardComponent keyboardComponent;
+    // Custom MidiKeyboardComponent subclass that suppresses default C note labels (C0..C7)
+    class CleanKeyboardComponent : public juce::MidiKeyboardComponent
+    {
+    public:
+        CleanKeyboardComponent (juce::MidiKeyboardState& state, Orientation orientation)
+            : juce::MidiKeyboardComponent (state, orientation) {}
+
+        juce::String getWhiteNoteText (int /*midiNoteNumber*/) override
+        {
+            return {}; // Suppress C0..C7 text to avoid octave naming confusion
+        }
+    };
+
+    CleanKeyboardComponent keyboardComponent;
 
     // Collapsible Console Output (hidden by default, toggled via bottom-right button)
     bool isConsoleExpanded { false };

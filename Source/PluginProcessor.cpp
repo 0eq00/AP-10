@@ -286,8 +286,7 @@ void AP10AudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::M
     auto* channelDataLeft  = buffer.getWritePointer(0);
     auto* channelDataRight = buffer.getWritePointer(1);
 
-    const float softMultiplier = engine.soft_pedal ? 0.7f : 1.0f;
-    const float masterVol = 0.5f * softMultiplier;
+    const float masterVol = 0.5f;
 
     for (int i = 0; i < buffer.getNumSamples(); ++i)
     {
