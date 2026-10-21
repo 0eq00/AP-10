@@ -18,10 +18,10 @@
 
 namespace GT913EpVibrato
 {
-    // Ticks of the engine (114483 Hz)
-    constexpr uint32_t POLL_PERIOD_TICKS = 4689;   // 40.96 ms
-    constexpr uint32_t POLL_OFFSET_TICKS = 1170;   // the pitch poll comes 10.2 ms after the envelope poll
-    constexpr uint32_t EARLY_POLL_TICKS  = 2461;   // 21.5 ms: a first poll earlier than this still writes the note-on pitch
+    // Ticks of the engine (115384.6 Hz)
+    constexpr uint32_t POLL_PERIOD_TICKS = 4726;   // 40.96 ms
+    constexpr uint32_t POLL_OFFSET_TICKS = 1177;   // the pitch poll comes 10.2 ms after the envelope poll
+    constexpr uint32_t EARLY_POLL_TICKS  = 2481;   // 21.5 ms: a first poll earlier than this still writes the note-on pitch
 
     struct Pattern
     {

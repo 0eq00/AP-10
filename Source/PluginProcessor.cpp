@@ -290,7 +290,7 @@ void AP10AudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::M
 
     for (int i = 0; i < buffer.getNumSamples(); ++i)
     {
-        // Run the engine at its own rate (about 114.5 kHz) until the resampler
+        // Run the engine at its own rate until the resampler
         // has enough source frames for the next output sample.
         while (resampler.needsInput())
         {
