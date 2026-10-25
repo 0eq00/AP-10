@@ -1204,8 +1204,9 @@ void GT913Engine::mix_sample(Voice& v, int64_t& left, int64_t& right)
     const uint32_t env_level = static_cast<uint32_t>(volume_ramp[env]) +
         (((volume_ramp[env + 1] - volume_ramp[env]) * env_step) >> 11);
 
-    const float presetGain = (v.m_preset_id >= 0 && v.m_preset_id < 5) ? preset_volume_gain[v.m_preset_id] : 1.0f;
-    const int64_t sample = static_cast<int64_t>((static_cast<int64_t>(v.m_sample) + (v.m_sample_next * step / 8)) * v.m_gain * env_level * presetGain);
+//  const float presetGain = (v.m_preset_id >= 0 && v.m_preset_id < 5) ? preset_volume_gain[v.m_preset_id] : 1.0f;
+//  const int64_t sample = static_cast<int64_t>((static_cast<int64_t>(v.m_sample) + (v.m_sample_next * step / 8)) * v.m_gain * env_level * presetGain);
+    const int64_t sample = static_cast<int64_t>((static_cast<int64_t>(v.m_sample) + (v.m_sample_next * step / 8)) * v.m_gain * env_level);
 
     left  += sample * v.m_balance[0];
     right += sample * v.m_balance[1];

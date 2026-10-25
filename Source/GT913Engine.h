@@ -121,7 +121,7 @@ public:
     // Harpsichord: -3.5 dB (0.668x)
     // Pipe Organ:  -1.1 dB (0.881x)
     // Strings:     +4.5 dB (1.679x)
-    const float preset_volume_gain[5] = { 1.00f, 0.99f, 1.03f, 1.00f, 1.00f };
+//  const float preset_volume_gain[5] = { 1.00f, 0.99f, 1.03f, 1.00f, 1.00f };
 
     // Every voice follows the multi-stage
     // envelope logged from the MAME AP-10 firmware (GT913EnvTables.h) and the decay, sustain

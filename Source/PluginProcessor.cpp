@@ -9,6 +9,8 @@
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
 
+const char* myromfile = "ap10.lsi303";
+
 juce::File AP10AudioProcessor::getPluginDirectory()
 {
     juce::File currentModule = juce::File::getSpecialLocation(juce::File::currentExecutableFile);
@@ -17,13 +19,13 @@ juce::File AP10AudioProcessor::getPluginDirectory()
     juce::File search = dir;
     for (int i = 0; i < 4; ++i)
     {
-        if (search.getChildFile("ap10.lsi303").existsAsFile())
+        if (search.getChildFile(myromfile).existsAsFile())
             return search;
         if (search.getFileName().endsWithIgnoreCase(".vst3"))
         {
-            if (search.getChildFile("ap10.lsi303").existsAsFile())
+            if (search.getChildFile(myromfile).existsAsFile())
                 return search;
-            if (search.getParentDirectory().getChildFile("ap10.lsi303").existsAsFile())
+            if (search.getParentDirectory().getChildFile(myromfile).existsAsFile())
                 return search.getParentDirectory();
             return search;
         }
@@ -38,12 +40,12 @@ juce::File AP10AudioProcessor::getPluginDirectory()
 juce::File AP10AudioProcessor::getDefaultRomFile()
 {
     juce::File pluginDir = getPluginDirectory();
-    juce::File targetRom = pluginDir.getChildFile("ap10.lsi303");
+    juce::File targetRom = pluginDir.getChildFile(myromfile);
     if (targetRom.existsAsFile())
         return targetRom;
 
-    if (pluginDir.getParentDirectory().getChildFile("ap10.lsi303").existsAsFile())
-        return pluginDir.getParentDirectory().getChildFile("ap10.lsi303");
+    if (pluginDir.getParentDirectory().getChildFile(myromfile).existsAsFile())
+        return pluginDir.getParentDirectory().getChildFile(myromfile);
 
     return targetRom;
 }
